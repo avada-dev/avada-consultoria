@@ -6,18 +6,24 @@ const upload = require('../config/upload');
 const path = require('path');
 const fs = require('fs');
 
-// Get all processes (filtered by user for lawyers)
+// Get all processes (filtered by partnership for admin, by user for lawyers)
 router.get('/', authenticate, (req, res) => {
     let query = `
-    SELECT p.*, c.name as client_name, c.phone as client_phone 
+    SELECT p.*, c.name as client_name, c.phone as client_phone, c.partnership_type
     FROM processes p 
     JOIN clients c ON p.client_id = c.id
+    WHERE 1=1
   `;
     let params = [];
 
+    // Admin AVADA sees only processes from AVADA clients
+    if (req.user.role === 'admin') {
+        query += ' AND c.partnership_type = ?';
+        params.push('AVADA');
+    }
     // Lawyers can only see processes of their clients
-    if (req.user.role === 'lawyer') {
-        query += ' WHERE c.user_id = ?';
+    else if (req.user.role === 'lawyer') {
+        query += ' AND c.user_id = ?';
         params.push(req.user.id);
     }
 

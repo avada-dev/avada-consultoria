@@ -3,14 +3,19 @@ const router = express.Router();
 const db = require('../database');
 const { authenticate } = require('../middleware/authMiddleware');
 
-// Get all clients (filtered by user for lawyers)
+// Get all clients (filtered by user for lawyers, by partnership for admin)
 router.get('/', authenticate, (req, res) => {
-    let query = 'SELECT * FROM clients';
+    let query = 'SELECT * FROM clients WHERE 1=1';
     let params = [];
 
+    // Admin AVADA sees only AVADA partnership clients
+    if (req.user.role === 'admin') {
+        query += ' AND partnership_type = ?';
+        params.push('AVADA');
+    }
     // Lawyers can only see their own clients
-    if (req.user.role === 'lawyer') {
-        query += ' WHERE user_id = ?';
+    else if (req.user.role === 'lawyer') {
+        query += ' AND user_id = ?';
         params.push(req.user.id);
     }
 
