@@ -370,7 +370,8 @@ async function saveClient() {
     phone: document.getElementById('client-phone').value,
     cpf: document.getElementById('client-cpf').value,
     address: document.getElementById('client-address').value,
-    notes: document.getElementById('client-notes').value
+    notes: document.getElementById('client-notes').value,
+    partnership_type: document.getElementById('client-partnership').value
   };
 
   try {
@@ -1027,4 +1028,51 @@ function getIconForFileType(mimeType) {
   if (mimeType.includes('word')) return '<i class="fas fa-file-word" style="color: #2b6cb0;"></i>';
   if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '<i class="fas fa-file-excel" style="color: #38a169;"></i>';
   return '<i class="fas fa-file-alt" style="color: #718096;"></i>';
+}
+
+// ===================================
+// PASSWORD CHANGE FUNCTIONS
+// ===================================
+
+function openChangePasswordModal() {
+  document.getElementById('change-password-modal').style.display = 'flex';
+  document.getElementById('change-password-form').reset();
+}
+
+function closeChangePasswordModal() {
+  document.getElementById('change-password-modal').style.display = 'none';
+  document.getElementById('change-password-form').reset();
+}
+
+async function submitPasswordChange() {
+  const currentPassword = document.getElementById('current-password').value;
+  const newPassword = document.getElementById('new-password').value;
+  const confirmPassword = document.getElementById('confirm-password').value;
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    alert('Preencha todos os campos!');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert('As senhas não coincidem!');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    alert('A nova senha deve ter pelo menos 6 caracteres!');
+    return;
+  }
+
+  try {
+    await fetchAPI('/auth/change-password', 'POST', {
+      currentPassword,
+      newPassword
+    });
+
+    alert('Senha alterada com sucesso!');
+    closeChangePasswordModal();
+  } catch (error) {
+    alert('Erro ao alterar senha: ' + (error.message || 'Senha atual incorreta'));
+  }
 }
