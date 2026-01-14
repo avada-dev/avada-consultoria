@@ -92,13 +92,14 @@ router.post('/import-caroline-data', async (req, res) => {
         for (const clientData of clientsData) {
             const result = await new Promise((resolve, reject) => {
                 db.run(
-                    'INSERT INTO clients (name, phone, cpf, email, notes) VALUES (?, ?, ?, ?, ?)',
+                    'INSERT INTO clients (name, phone, cpf, email, notes, partnership_type) VALUES (?, ?, ?, ?, ?, ?)',
                     [
                         clientData.name,
                         clientData.phone,
                         '',
                         '',
-                        'Cliente importado da planilha da Dra. Caroline Fortes - Parceria AVADA'
+                        'Cliente importado da planilha da Dra. Caroline Fortes - Parceria AVADA',
+                        'AVADA'
                     ],
                     function (err) {
                         if (err) reject(err);
@@ -125,7 +126,7 @@ router.post('/import-caroline-data', async (req, res) => {
                 db.run(
                     `INSERT INTO processes (
                         client_id, 
-                        process_number, 
+                        case_number, 
                         case_type, 
                         status, 
                         partnership_type,

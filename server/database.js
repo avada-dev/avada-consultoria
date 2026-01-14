@@ -73,6 +73,12 @@ const initDatabase = () => {
     db.run(`ALTER TABLE processes ADD COLUMN state TEXT`, (err) => { });
     db.run(`ALTER TABLE processes ADD COLUMN traffic_agency TEXT`, (err) => { });
     db.run(`ALTER TABLE processes ADD COLUMN court TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN case_type TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN documents TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN partnership_type TEXT DEFAULT 'PARTICULAR'`, (err) => { });
+
+    // Add partnership column to clients
+    db.run(`ALTER TABLE clients ADD COLUMN partnership_type TEXT DEFAULT 'PARTICULAR'`, (err) => { });
 
     // Settings table for system configurations
     db.run(`
