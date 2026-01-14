@@ -126,15 +126,17 @@ router.post('/import-caroline-data', async (req, res) => {
                 db.run(
                     `INSERT INTO processes (
                         client_id, 
-                        case_number, 
+                        case_number,
+                        type,
                         case_type, 
                         status, 
                         partnership_type,
                         documents
-                    ) VALUES (?, ?, ?, ?, ?, ?)`,
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                     [
                         clientId,
                         processData.caseNumber,
+                        processData.caseType,
                         processData.caseType,
                         processData.status,
                         processData.partnership,
