@@ -77,6 +77,14 @@ const initDatabase = () => {
     db.run(`ALTER TABLE processes ADD COLUMN documents TEXT`, (err) => { });
     db.run(`ALTER TABLE processes ADD COLUMN partnership_type TEXT DEFAULT 'PARTICULAR'`, (err) => { });
 
+    // New columns for process categories and deadline calculation
+    db.run(`ALTER TABLE processes ADD COLUMN process_category TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN publication_date DATE`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN deadline_days INTEGER`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN fatal_deadline DATE`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN holidays_info TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN suspensions_info TEXT`, (err) => { });
+
     // Add partnership column to clients
     db.run(`ALTER TABLE clients ADD COLUMN partnership_type TEXT DEFAULT 'PARTICULAR'`, (err) => { });
 
