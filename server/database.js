@@ -171,38 +171,14 @@ const initDatabase = () => {
       }
     });
 
-    // Seed some sample clients and processes
-    db.get("SELECT COUNT(*) as count FROM clients", [], (err, row) => {
-      if (row.count === 0) {
-        const sampleClients = [
-          { name: 'João Silva', email: 'joao@email.com', phone: '(11) 98765-4321', cpf: '123.456.789-00', user_id: 2 },
-          { name: 'Maria Santos', email: 'maria@email.com', phone: '(11) 98765-4322', cpf: '987.654.321-00', user_id: 3 },
-          { name: 'Pedro Costa', email: 'pedro@email.com', phone: '(11) 98765-4323', cpf: '456.789.123-00', user_id: 4 }
-        ];
-
-        const stmt = db.prepare("INSERT INTO clients (name, email, phone, cpf, user_id) VALUES (?, ?, ?, ?, ?)");
-        sampleClients.forEach(client => {
-          stmt.run(client.name, client.email, client.phone, client.cpf, client.user_id);
-        });
-        stmt.finalize();
-
-        // Add sample processes
-        const sampleProcesses = [
-          { client_id: 1, case_number: '2024001-SP', type: 'Recurso de Multa', status: 'Em Andamento', description: 'Recurso de multa por velocidade' },
-          { client_id: 2, case_number: '2024002-MG', type: 'Perícia Digital', status: 'Concluído', description: 'Análise de CNH' },
-          { client_id: 3, case_number: '2024003-SP', type: 'Parecer Técnico', status: 'Aguardando Documentos', description: 'Laudo técnico de acidente' }
-        ];
-
-        const stmtProc = db.prepare("INSERT INTO processes (client_id, case_number, type, status, description) VALUES (?, ?, ?, ?, ?)");
-        sampleProcesses.forEach(proc => {
-          stmtProc.run(proc.client_id, proc.case_number, proc.type, proc.status, proc.description);
-        });
-        stmtProc.finalize();
-
-        console.log('✅ Sample data added');
-      }
-    });
+    // Seed some sample clients and processes -> REMOVED per user request
+    // db.get("SELECT COUNT(*) as count FROM clients", [], (err, row) => {
+    //   if (row.count === 0) {
+    //      // Fake data removed
+    //   }
+    // });
   });
+};
 };
 
 initDatabase();
