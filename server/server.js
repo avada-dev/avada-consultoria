@@ -23,6 +23,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/clients', require('./routes/clients'));
 app.use('/api/processes', require('./routes/processes'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/import', require('./routes/import'));
 
 // Default route for SPA
 app.get('*', (req, res) => {
