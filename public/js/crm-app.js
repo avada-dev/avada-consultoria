@@ -2,9 +2,10 @@
 // AVADA CRM - CLIENT APPLICATION
 // ==========================================
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 let currentUser = null;
 let authToken = null;
+let currentProcessId = null; // State for attachments modal
 
 // ==========================================
 // AUTHENTICATION
@@ -61,6 +62,12 @@ function setupEventListeners() {
       switchView(view);
     });
   });
+
+  // Upload Form
+  const uploadForm = document.getElementById('upload-form');
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', handleUpload);
+  }
 }
 
 async function handleLogin(e) {
@@ -136,6 +143,13 @@ function showDashboard() {
 
   // Load dashboard
   loadDashboard();
+
+  // Initialize Deadline Alerts
+  if (typeof startDeadlineMonitoring === 'function') {
+    startDeadlineMonitoring();
+  } else {
+    console.warn('Deadline alerts script not loaded');
+  }
 }
 
 // ==========================================
@@ -284,16 +298,18 @@ async function loadClients() {
               <th>E-mail</th>
               <th>Telefone</th>
               <th>CPF</th>
+              <th>Advogado Responsável</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
             ${clients.map(c => `
               <tr>
-                <td><strong>${c.name}</strong></td>
+                <td onclick="viewClientFull(${c.id})" style="cursor: pointer;"><strong>${c.name}</strong></td>
                 <td>${c.email || '-'}</td>
                 <td>${c.phone}</td>
                 <td>${c.cpf || '-'}</td>
+                <td>${c.lawyer_name || '-'}</td>
                 <td class="table-actions">
                   <button class="btn btn-sm btn-secondary" onclick='editClient(${JSON.stringify(c)})'>
                     <i class="fas fa-edit"></i>
@@ -360,14 +376,17 @@ async function saveClient() {
   try {
     if (id) {
       await fetchAPI(`/clients/${id}`, 'PUT', data);
+      alert('Cliente atualizado com sucesso!');
     } else {
       await fetchAPI('/clients', 'POST', data);
+      alert('Cliente cadastrado com sucesso!');
     }
 
     closeClientModal();
     loadClients();
   } catch (error) {
-    alert('Erro ao salvar cliente');
+    alert('Erro ao salvar cliente: ' + (error.message || 'Erro desconhecido'));
+    console.error('Erro completo:', error);
   }
 }
 
@@ -414,6 +433,7 @@ async function loadProcesses() {
               <th>Nº do Caso</th>
               <th>Cliente</th>
               <th>Tipo</th>
+              <th>Advogado Responsável</th>
               <th>Status</th>
               <th>Prazo</th>
               <th>Ações</th>
@@ -422,9 +442,10 @@ async function loadProcesses() {
           <tbody>
             ${processes.map(p => `
               <tr>
-                <td><strong>${p.case_number}</strong></td>
+                <td onclick="viewProcess(${p.id})" style="cursor: pointer;"><strong>${p.case_number}</strong></td>
                 <td>${p.client_name || 'N/A'}</td>
                 <td>${p.type}</td>
+                <td>${p.lawyer_name || '-'}</td>
                 <td><span class="badge ${getStatusBadge(p.status)}">${p.status}</span></td>
                 <td>${p.deadline ? formatDate(p.deadline) : '-'}</td>
                 <td class="table-actions">
@@ -462,10 +483,12 @@ function openProcessModal(process = null) {
     document.getElementById('process-status').value = process.status;
     document.getElementById('process-description').value = process.description || '';
     document.getElementById('process-deadline').value = process.deadline || '';
+    document.getElementById('process-partnership').value = process.partnership_type || 'AVADA';
   } else {
     title.textContent = 'Novo Processo';
     document.getElementById('process-form').reset();
     document.getElementById('process-id').value = '';
+    document.getElementById('process-partnership').value = 'AVADA';
   }
 
   modal.classList.add('show');
@@ -488,7 +511,8 @@ async function saveProcess() {
     phase: document.getElementById('process-phase').value,
     status: document.getElementById('process-status').value,
     description: document.getElementById('process-description').value,
-    deadline: document.getElementById('process-deadline').value
+    deadline: document.getElementById('process-deadline').value,
+    partnership_type: document.getElementById('process-partnership').value
   };
 
   try {
@@ -517,75 +541,264 @@ async function deleteProcess(id) {
 }
 
 // ==========================================
+// VIEW FUNCTIONS - CLICKABLE LISTS
+// ==========================================
+
+async function viewProcess(id) {
+  try {
+    const process = await fetchAPI(`/processes/${id}`);
+    alert(`Detalhes do Processo ${process.case_number}\n\nCliente: ${process.client_name}\nTipo: ${process.type}\nStatus: ${process.status}\nDescrição: ${process.description || 'Sem descrição'}`);
+  } catch (error) {
+    alert('Erro ao carregar processo: ' + error.message);
+  }
+}
+
+async function viewClientFull(id) {
+  try {
+    const data = await fetchAPI(`/clients/${id}/full`);
+    const client = data.client;
+    const processes = data.processes;
+    const stats = data.stats;
+
+    // Build the HTML for the Full Folder View
+    const html = `
+      <div class="mb-20">
+        <button class="btn btn-secondary" onclick="loadClients()">
+          <i class="fas fa-arrow-left"></i> Voltar para Lista de Clientes
+        </button>
+      </div>
+
+      <div class="info-card mb-20" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div class="flex-between">
+            <h2 style="font-size: 1.8rem; color: #2d3748; margin-bottom: 20px;">
+                <i class="fas fa-folder-open" style="color: #667eea;"></i> Pasta Completa: ${client.name}
+            </h2>
+             <button class="btn btn-primary" onclick='editClient(${JSON.stringify(client).replace(/'/g, "&apos;")})'>
+                <i class="fas fa-edit"></i> Editar Dados
+             </button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 10px;">
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">E-mail</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${client.email || '-'}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Telefone</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${client.phone || '-'}</p>
+            </div>
+             <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">CPF</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${client.cpf || '-'}</p>
+            </div>
+             <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Endereço</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${client.address || '-'}</p>
+            </div>
+        </div>
+        ${client.notes ? `
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+             <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Observações</p>
+             <p style="color: #4a5568;">${client.notes}</p>
+        </div>` : ''}
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-folder"></i></div>
+          <div class="stat-value">${stats.totalProcesses}</div>
+          <div class="stat-label">Total de Processos</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green"><i class="fas fa-play"></i></div>
+          <div class="stat-value">${stats.activeProcesses}</div>
+          <div class="stat-label">Em Andamento</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon purple"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-value">${stats.concludedProcesses}</div>
+          <div class="stat-label">Concluídos</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon orange"><i class="fas fa-archive"></i></div>
+          <div class="stat-value">${stats.archivedProcesses}</div>
+          <div class="stat-label">Arquivados</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header">
+          <h3 class="table-title">Processos do Cliente</h3>
+           <button class="btn btn-primary" onclick="openProcessModal()">
+            <i class="fas fa-plus"></i> Novo Processo
+          </button>
+        </div>
+        ${processes.length > 0 ? `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Caso / Tipo</th>
+              <th>Status / Fase</th>
+              <th>Advogado</th>
+              <th>Próx. Prazo</th>
+              <th>Parceria</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${processes.map(p => `
+              <tr>
+                <td>
+                    <div style="font-weight: bold; color: #2d3748;">${p.case_number}</div>
+                    <div style="font-size: 0.85rem; color: #718096;">${p.type}</div>
+                </td>
+                <td>
+                    <span class="badge ${getStatusBadge(p.status)}">${p.status}</span>
+                    <div style="font-size: 0.8rem; margin-top: 4px; color: #4a5568;">${p.phase || '-'}</div>
+                </td>
+                <td>${p.lawyer_name || '-'}</td>
+                 <td>${p.deadline ? `<span style="color: ${isDateNear(p.deadline) ? '#e53e3e' : '#2d3748'}; font-weight: 600;"><i class="fas fa-calendar-alt"></i> ${formatDate(p.deadline)}</span>` : '-'}</td>
+                 <td>
+                    <span class="badge ${p.partnership_type === 'PARTICULAR' ? 'badge-warning' : 'badge-info'}" style="font-size: 0.75rem;">
+                        ${p.partnership_type || 'AVADA'}
+                    </span>
+                 </td>
+                <td class="table-actions">
+                  <button class="btn btn-sm btn-secondary" onclick='editProcess(${JSON.stringify(p).replace(/'/g, "&apos;")})' title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                   <button class="btn btn-sm btn-info" onclick="openAttachmentsModal(${p.id})" title="Anexos" style="background: #3182ce; color: white;">
+                    <i class="fas fa-paperclip"></i>
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ` : `
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-folder-open"></i></div>
+            <div class="empty-state-title">Nenhum processo encontrado</div>
+            <p>Este cliente ainda não possui processos cadastrados.</p>
+        </div>
+        `}
+      </div>
+    `;
+
+    document.getElementById('content-area').innerHTML = html;
+    document.getElementById('page-title').textContent = 'Detalhes do Cliente';
+
+    // Scroll to top
+    window.scrollTo(0, 0);
+
+  } catch (error) {
+    console.error(error);
+    alert('Erro ao carregar pasta do cliente: ' + error.message);
+  }
+}
+
+// Helper to check if date is near (for red color)
+function isDateNear(dateString) {
+  const today = new Date();
+  const deadline = new Date(dateString);
+  const diffTime = deadline - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 5 && diffDays >= 0;
+}
+
+// ==========================================
+// CHANGE PASSWORD
+// ==========================================
+
+function openPasswordModal() {
+  document.getElementById('password-modal').classList.add('show');
+  document.getElementById('password-form').reset();
+}
+
+function closePasswordModal() {
+  document.getElementById('password-modal').classList.remove('show');
+}
+
+async function changePassword() {
+  const currentPassword = document.getElementById('current-password').value;
+  const newPassword = document.getElementById('new-password').value;
+  const confirmPassword = document.getElementById('confirm-password').value;
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    alert('Preencha todos os campos');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert('A nova senha e a confirmação não coincidem');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    alert('A nova senha deve ter no mínimo 6 caracteres');
+    return;
+  }
+
+  try {
+    await fetchAPI('/auth/change-password', 'PUT', {
+      currentPassword,
+      newPassword
+    });
+
+    alert('Senha alterada com sucesso!');
+    closePasswordModal();
+  } catch (error) {
+    alert('Erro ao alterar senha: ' + error.message);
+  }
+}
+
+// ==========================================
 // SYSTEM INFO VIEW (ADMIN ONLY)
 // ==========================================
 
 async function loadSystemInfo() {
-  if (currentUser.role !== 'admin') {
-    showError('Acesso negado. Apenas administradores.');
-    return;
-  }
-
   document.getElementById('page-title').textContent = 'Informações do Sistema';
+  document.getElementById('content-area').innerHTML = '<div class="loading"></div>';
 
   try {
-    const data = await fetchAPI('/admin/system-info');
+    const response = await fetch(`${API_URL}/admin/system-info`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    if (!response.ok) throw new Error('Falha ao carregar informações');
+
+    const data = await response.json();
 
     const html = `
       <div class="info-grid">
         <div class="info-card">
-          <h3>
-            <span class="info-card-icon">📊</span>
-            Estatísticas do Sistema
-          </h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value">${data.statistics.totalUsers}</div>
-              <div class="stat-label">Total de Usuários</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${data.statistics.totalLawyers}</div>
-              <div class="stat-label">Advogados</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${data.statistics.totalClients}</div>
-              <div class="stat-label">Clientes</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">${data.statistics.totalProcesses}</div>
-              <div class="stat-label">Processos</div>
-            </div>
-          </div>
+          <h3><i class="fas fa-database info-card-icon"></i> Banco de Dados</h3>
+          <p><strong>Tipo:</strong> ${data.systemInfo.databaseType}</p>
+          <p><strong>Status:</strong> Conectado</p>
+          <p><strong>Expiração JWT:</strong> ${data.systemInfo.jwtExpiration}</p>
+        </div>
+        
+        <div class="info-card">
+          <h3><i class="fas fa-server info-card-icon"></i> Estatísticas Gerais</h3>
+          <p><strong>Clientes:</strong> ${data.statistics.totalClients}</p>
+          <p><strong>Processos:</strong> ${data.statistics.totalProcesses}</p>
+          <p><strong>Advogados:</strong> ${data.statistics.totalLawyers}</p>
         </div>
 
-        <div class="info-card">
-          <h3>
-            <span class="info-card-icon">👥</span>
-            Usuários do Sistema
-          </h3>
+        <div class="info-card" style="grid-column: 1 / -1;">
+          <h3><i class="fas fa-users info-card-icon"></i> Usuários do Sistema (${data.users.length})</h3>
           <ul class="user-list">
             ${data.users.map(u => `
               <li class="user-item">
                 <div class="user-item-name">${u.name}</div>
                 <div class="user-item-email">${u.email}</div>
-                <div class="user-item-role">
-                  <span class="badge ${u.role === 'admin' ? 'badge-danger' : 'badge-info'}">
-                    ${u.role === 'admin' ? 'Administrador' : 'Advogado'}
-                  </span>
-                  ${u.oab ? `<span class="badge badge-success">${u.oab}</span>` : ''}
+                <div class="user-item-role badge ${u.role === 'admin' ? 'badge-danger' : 'badge-info'}">
+                  ${u.role}
                 </div>
               </li>
             `).join('')}
           </ul>
         </div>
-
-        <div class="info-card">
-          <h3>
-            <span class="info-card-icon">🔐</span>
-            Informações de Segurança
-          </h3>
-          <div class="alert alert-info">
-            <p><strong>Senha padrão para novos advogados:</strong> ${data.systemInfo.defaultPassword}</p>
             <p><strong>Expiração do Token:</strong> ${data.systemInfo.jwtExpiration}</p>
             <p><strong>Banco de Dados:</strong> ${data.systemInfo.databaseType}</p>
           </div>
@@ -679,3 +892,139 @@ function showError(message) {
 }
 
 console.log('🚀 AVADA CRM - Application initialized');
+
+// ==========================================
+// ATTACHMENTS (FILE UPLOAD)
+// ==========================================
+
+function openAttachmentsModal(processId) {
+  currentProcessId = processId;
+  const modal = document.getElementById('attachments-modal');
+  modal.classList.add('show');
+  loadAttachments(processId);
+}
+
+function closeAttachmentsModal() {
+  document.getElementById('attachments-modal').classList.remove('show');
+  document.getElementById('upload-form').reset();
+  currentProcessId = null;
+}
+
+async function loadAttachments(processId) {
+  const list = document.getElementById('attachments-list');
+  const emptyState = document.getElementById('attachments-empty');
+  const loading = document.getElementById('attachments-loading');
+
+  list.innerHTML = '';
+  loading.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+
+  try {
+    const response = await fetch(`${API_URL}/processes/${processId}/attachments`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+
+    if (!response.ok) throw new Error('Erro ao carregar anexos');
+
+    const attachments = await response.json();
+
+    loading.classList.add('hidden');
+
+    if (attachments.length === 0) {
+      emptyState.classList.remove('hidden');
+      return;
+    }
+
+    list.innerHTML = attachments.map(att => `
+            <div class="attachment-item">
+                <div class="attachment-info">
+                    <div class="attachment-icon">
+                        ${getIconForFileType(att.file_type)}
+                    </div>
+                    <div class="attachment-details">
+                        <div class="attachment-name">${att.original_name}</div>
+                        <div class="attachment-meta">
+                            ${(att.file_size / 1024).toFixed(1)} KB • ${formatDate(att.created_at)} • Por ${att.uploaded_by_name || 'Usuário'}
+                        </div>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <a href="${API_URL}/processes/attachments/${att.id}/download" target="_blank" class="btn btn-sm btn-secondary" title="Baixar">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    ${currentUser.id === att.uploaded_by || currentUser.role === 'admin' ? `
+                    <button class="btn btn-sm btn-danger" onclick="deleteAttachment(${att.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+
+  } catch (error) {
+    loading.classList.add('hidden');
+    list.innerHTML = `<div class="error-message show">Erro ao carregar anexos: ${error.message}</div>`;
+  }
+}
+
+async function handleUpload(e) {
+  e.preventDefault();
+  if (!currentProcessId) return;
+
+  const fileInput = document.getElementById('attachment-file');
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const loading = document.getElementById('upload-progress');
+  const btn = e.target.querySelector('button');
+
+  loading.classList.remove('hidden');
+  btn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const response = await fetch(`${API_URL}/processes/${currentProcessId}/attachments`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Erro no upload');
+    }
+
+    // Success
+    fileInput.value = '';
+    loadAttachments(currentProcessId);
+
+  } catch (error) {
+    alert('Erro ao enviar arquivo: ' + error.message);
+  } finally {
+    loading.classList.add('hidden');
+    btn.disabled = false;
+  }
+}
+
+async function deleteAttachment(id) {
+  if (!confirm('Tem certeza que deseja excluir este arquivo?')) return;
+
+  try {
+    await fetchAPI(`/processes/attachments/${id}`, 'DELETE');
+    loadAttachments(currentProcessId);
+  } catch (error) {
+    alert('Erro ao excluir arquivo');
+  }
+}
+
+function getIconForFileType(mimeType) {
+  if (mimeType.includes('pdf')) return '<i class="fas fa-file-pdf" style="color: #e53e3e;"></i>';
+  if (mimeType.includes('image')) return '<i class="fas fa-file-image" style="color: #3182ce;"></i>';
+  if (mimeType.includes('word')) return '<i class="fas fa-file-word" style="color: #2b6cb0;"></i>';
+  if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '<i class="fas fa-file-excel" style="color: #38a169;"></i>';
+  return '<i class="fas fa-file-alt" style="color: #718096;"></i>';
+}

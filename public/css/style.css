@@ -14,26 +14,26 @@
   --accent-gold: #d97706;
   --accent-gold-light: #fbbf24;
   --accent-gold-dark: #b45309;
-  
+
   --text-dark: #0f172a;
   --text-light: #64748b;
   --text-white: #ffffff;
-  
+
   --bg-white: #ffffff;
   --bg-light: #f8fafc;
   --bg-dark: #0f172a;
-  
+
   --border-color: #e2e8f0;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-  
+
   /* Typography */
   --font-primary: 'Quattrocento Sans', sans-serif;
   --font-heading: 'Oranienbaum', serif;
   --font-accent: 'Sorts Mill Goudy', serif;
-  
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -42,13 +42,13 @@
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
   --spacing-3xl: 4rem;
-  
+
   /* Border Radius */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 1rem;
   --radius-full: 9999px;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease-in-out;
   --transition-base: 300ms ease-in-out;
@@ -98,7 +98,12 @@ ul {
    TYPOGRAPHY
    ========================================== */
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   line-height: 1.2;
@@ -123,8 +128,9 @@ h4 {
 
 p {
   margin-bottom: var(--spacing-md);
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   color: var(--text-light);
+  line-height: 1.7;
 }
 
 .accent-text {
@@ -303,14 +309,16 @@ p {
    ========================================== */
 
 .hero {
-  min-height: 100vh;
+  min-height: 70vh;
   display: flex;
   align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
   color: var(--text-white);
   position: relative;
   overflow: hidden;
-  padding-top: 80px;
+  padding: 100px 0 60px 0;
+  text-align: center;
 }
 
 .hero::before {
@@ -327,26 +335,35 @@ p {
 .hero-content {
   position: relative;
   z-index: 1;
-  max-width: 800px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
 }
 
 .hero-title {
-  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-size: clamp(2rem, 4vw, 3.5rem);
   margin-bottom: var(--spacing-lg);
-  line-height: 1.1;
+  line-height: 1.2;
+  font-weight: 700;
 }
 
 .hero-subtitle {
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
-  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: var(--spacing-xl);
   font-family: var(--font-accent);
+  font-weight: 400;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .hero-buttons {
   display: flex;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: var(--spacing-2xl);
 }
 
 /* ==========================================
@@ -376,7 +393,7 @@ p {
 }
 
 .stat-number {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: var(--accent-gold);
   font-family: var(--font-heading);
@@ -384,8 +401,9 @@ p {
 
 .stat-label {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.95);
   margin-top: var(--spacing-sm);
+  font-weight: 500;
 }
 
 /* ==========================================
@@ -414,7 +432,7 @@ p {
 }
 
 .service-icon {
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: var(--accent-gold);
   margin-bottom: var(--spacing-md);
 }
@@ -545,12 +563,12 @@ p {
 
 .team-image {
   width: 100%;
-  height: 300px;
+  height: 200px;
   background: linear-gradient(135deg, var(--primary-navy) 0%, var(--accent-gold) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 4rem;
+  font-size: 2.5rem;
   color: var(--text-white);
 }
 
@@ -759,6 +777,7 @@ p {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -769,6 +788,7 @@ p {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -779,6 +799,7 @@ p {
     opacity: 0;
     transform: translateX(50px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -786,9 +807,12 @@ p {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }

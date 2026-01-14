@@ -1,0 +1,215 @@
+/* ==========================================
+   DEADLINE ALERTS - ALERTS POPUP
+   ========================================== */
+
+.deadline-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.deadline-popup.show {
+    opacity: 1;
+}
+
+.deadline-popup-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.deadline-popup-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #666;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.deadline-popup-close:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.deadline-popup-content h2 {
+    margin: 0 0 25px 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.alert-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 5px solid;
+}
+
+.alert-critical {
+    background: #fff5f5;
+    border-color: #dc2626;
+}
+
+.alert-critical h3 {
+    color: #dc2626;
+    margin: 0 0 15px 0;
+    font-size: 18px;
+}
+
+.alert-warning {
+    background: #fffbeb;
+    border-color: #f59e0b;
+}
+
+.alert-warning h3 {
+    color: #d97706;
+    margin: 0 0 15px 0;
+    font-size: 18px;
+}
+
+.alert-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.alert-section li {
+    background: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.alert-section li strong {
+    color: #111827;
+    font-size: 16px;
+}
+
+.alert-detail {
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.alert-deadline {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.alert-section .btn-sm {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.alert-section .btn-sm:hover {
+    background: #1d4ed8;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.popup-actions .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.popup-actions .btn-primary {
+    background: #2563eb;
+    color: white;
+}
+
+.popup-actions .btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.popup-actions .btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.popup-actions .btn-secondary:hover {
+    background: #d1d5db;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .deadline-popup-content {
+        max-width: 90%;
+        padding: 20px;
+    }
+
+    .deadline-popup-content h2 {
+        font-size: 20px;
+    }
+
+    .alert-section h3 {
+        font-size: 16px;
+    }
+
+    .popup-actions {
+        flex-direction: column;
+    }
+
+    .popup-actions .btn {
+        width: 100%;
+    }
+}

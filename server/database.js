@@ -1,9 +1,17 @@
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, 'database.sqlite');
+// Create data directory if it doesn't exist
+const dataDir = path.join(__dirname, '../data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const DB_PATH = path.join(dataDir, 'database.sqlite');
 const db = new sqlite3.Database(DB_PATH);
+console.log(`📂 Banco de dados conectado em: ${DB_PATH}`);
 
 // Initialize database schema
 const initDatabase = () => {
@@ -49,16 +57,48 @@ const initDatabase = () => {
         status TEXT NOT NULL DEFAULT 'Em Andamento',
         description TEXT,
         deadline DATE,
+        city TEXT,
+        state TEXT,
+        traffic_agency TEXT,
+        court TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (client_id) REFERENCES clients(id)
       )
     `);
 
-    // Add phase column if it doesn't exist (for existing databases)
-    db.run(`ALTER TABLE processes ADD COLUMN phase TEXT`, (err) => {
-      // Ignore error if column already exists
-    });
+    // Add new columns if they don't exist (for existing databases)
+    db.run(`ALTER TABLE processes ADD COLUMN phase TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN city TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN state TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN traffic_agency TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN court TEXT`, (err) => { });
+
+    // Settings table for system configurations
+    db.run(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Attachments table for process files
+    db.run(`
+      CREATE TABLE IF NOT EXISTS attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        process_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        uploaded_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (process_id) REFERENCES processes(id) ON DELETE CASCADE,
+        FOREIGN KEY (uploaded_by) REFERENCES users(id)
+      )
+    `);
 
     // Check if admin exists
     db.get("SELECT * FROM users WHERE email = ?", ['victorvitrine02@gmail.com'], (err, row) => {
@@ -96,6 +136,14 @@ const initDatabase = () => {
             role: 'lawyer',
             phone: '(12) 98846-3633',
             oab: 'OAB/SP 428.536'
+          },
+          {
+            email: 'joadnoribeiro@gmail.com',
+            password: bcrypt.hashSync('advogado2024', 10),
+            name: 'Dr. Joadno de Deus Ribeiro',
+            role: 'lawyer',
+            phone: '(21) 974490650',
+            oab: 'OAB/RJ 199312'
           }
         ];
 

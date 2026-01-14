@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AVADA CRM | Sistema de Gestão</title>
     <link rel="stylesheet" href="css/crm-style.css">
+    <link rel="stylesheet" href="css/deadline-alerts.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
@@ -298,15 +299,15 @@
                     <input type="hidden" id="user-id">
                     <div class="form-group">
                         <label class="form-label">Nome Completo *</label>
-                        <input type="text" id="user-name" class="form-input" required>
+                        <input type="text" id="user-modal-name" class="form-input" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">E-mail *</label>
-                        <input type="email" id="user-email" class="form-input" required>
+                        <input type="email" id="user-modal-email" class="form-input" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Perfil *</label>
-                        <select id="user-role" class="form-input" required>
+                        <select id="user-role-select" class="form-input" required>
                             <option value="lawyer">Advogado</option>
                             <option value="admin">Administrador</option>
                         </select>
@@ -333,8 +334,78 @@
         </div>
     </div>
 
-    <script src="js/crm-app.js"></script>
-    <script src="js/crm-users.js"></script>
+    <!-- Change Password Modal -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Alterar Senha</h2>
+                <button class="modal-close" onclick="closePasswordModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="password-form">
+                    <div class="form-group">
+                        <label class="form-label">Senha Atual *</label>
+                        <input type="password" id="current-password" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nova Senha *</label>
+                        <input type="password" id="new-password" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirmar Nova Senha *</label>
+                        <input type="password" id="confirm-password" class="form-input" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closePasswordModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="changePassword()">Alterar Senha</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachments Modal -->
+    <div id="attachments-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="attachments-modal-title">Anexos do Processo</h2>
+                <button class="modal-close" onclick="closeAttachmentsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="attachments-loading" class="text-center hidden">
+                    <div class="loading" style="border-top-color: #667eea; border-right-color: #667eea;"></div>
+                </div>
+
+                <div id="attachments-list" class="attachments-list">
+                    <!-- Javascript populates -->
+                </div>
+
+                <div id="attachments-empty" class="empty-state hidden" style="padding: 20px;">
+                    <div style="font-size: 2rem; color: #cbd5e0; margin-bottom: 10px;"><i
+                            class="fas fa-file-upload"></i></div>
+                    <p>Nenhum arquivo anexado</p>
+                </div>
+
+                <div class="upload-area">
+                    <h3 style="font-size: 1rem; margin-bottom: 15px; color: #4a5568;">Adicionar Novo Arquivo</h3>
+                    <form id="upload-form" class="flex-row gap-10">
+                        <input type="file" id="attachment-file" class="form-input" style="padding: 8px;" required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Enviar
+                        </button>
+                    </form>
+                    <div id="upload-progress" class="hidden"
+                        style="margin-top: 10px; color: #4299e1; font-weight: 600; font-size: 0.9rem;">
+                        <i class="fas fa-spinner fa-spin"></i> Enviando arquivo...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/crm-app.js?v=2.2"></script>
+    <script src="js/crm-users.js?v=2.2"></script>
+    <script src="js/crm-deadline-alerts.js?v=2.2"></script>
 </body>
 
 </html>

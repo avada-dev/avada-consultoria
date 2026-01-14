@@ -131,4 +131,83 @@ router.delete('/:id', authenticate, (req, res) => {
     });
 });
 
+// ==========================================
+// FULL CLIENT FOLDER - Pasta Completa
+// ==========================================
+
+// Get client details with ALL processes and attachments
+router.get('/:id/full', authenticate, (req, res) => {
+    const clientId = req.params.id;
+
+    // Get client
+    db.get('SELECT * FROM clients WHERE id = ?', [clientId], (err, client) => {
+        if (err || !client) {
+            return res.status(404).json({ error: 'Cliente não encontrado' });
+        }
+
+        // Check permission
+        if (req.user.role === 'lawyer' && client.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Acesso negado' });
+        }
+
+        // Get lawyer info  
+        db.get('SELECT id, name, email, oab FROM users WHERE id = ?', [client.user_id], (err, lawyer) => {
+
+            // Get all processes of client
+            const processQuery = `
+                SELECT p.*
+                FROM processes p
+                WHERE p.client_id = ?
+                ORDER BY p.created_at DESC
+            `;
+
+            db.all(processQuery, [clientId], (err, processes) => {
+                if (err) {
+                    return res.status(500).json({ error: 'Erro ao buscar processos' });
+                }
+
+                // Get attachments for each process
+                let processesCompleted = 0;
+                const totalProcesses = processes.length;
+
+                if (totalProcesses === 0) {
+                    return res.json({
+                        client,
+                        lawyer,
+                        processes: [],
+                        stats: {
+                            totalProcesses: 0,
+                            activeProcesses: 0,
+                            concludedProcesses: 0,
+                            archivedProcesses: 0
+                        }
+                    });
+                }
+
+                processes.forEach(process => {
+                    db.all('SELECT * FROM attachments WHERE process_id = ? ORDER BY created_at DESC', [process.id], (err, attachments) => {
+                        process.attachments = attachments || [];
+                        processesCompleted++;
+
+                        if (processesCompleted === totalProcesses) {
+                            // All processes loaded, send response
+                            res.json({
+                                client,
+                                lawyer,
+                                processes,
+                                stats: {
+                                    totalProcesses: processes.length,
+                                    activeProcesses: processes.filter(p => p.status === 'Em Andamento').length,
+                                    concludedProcesses: processes.filter(p => p.status === 'Concluído').length,
+                                    archivedProcesses: processes.filter(p => p.status === 'Arquivado').length
+                                }
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    });
+});
+
 module.exports = router;

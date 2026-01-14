@@ -707,3 +707,77 @@ body {
 .gap-10 {
     gap: 10px;
 }
+
+/* ==========================================
+   ATTACHMENTS
+   ========================================== */
+
+.attachments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.attachment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.attachment-item:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.attachment-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.attachment-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 8px;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+}
+
+.attachment-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.attachment-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+}
+
+.attachment-meta {
+    font-size: 0.8rem;
+    color: #718096;
+}
+
+.upload-area {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.flex-row {
+    display: flex;
+    align-items: center;
+}

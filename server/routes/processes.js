@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { authenticate } = require('../middleware/authMiddleware');
+const upload = require('../config/upload');
+const path = require('path');
+const fs = require('fs');
 
 // Get all processes (filtered by user for lawyers)
 router.get('/', authenticate, (req, res) => {
@@ -52,7 +55,7 @@ router.get('/:id', authenticate, (req, res) => {
 
 // Create new process
 router.post('/', authenticate, (req, res) => {
-    const { client_id, case_number, type, status, description, deadline } = req.body;
+    const { client_id, case_number, type, status, description, deadline, phase, city, state, traffic_agency, court } = req.body;
 
     if (!client_id || !case_number || !type) {
         return res.status(400).json({ error: 'Cliente, número do caso e tipo são obrigatórios' });
@@ -72,8 +75,9 @@ router.post('/', authenticate, (req, res) => {
 
     function createProcess() {
         db.run(
-            'INSERT INTO processes (client_id, case_number, type, status, description, deadline) VALUES (?, ?, ?, ?, ?, ?)',
-            [client_id, case_number, type, status || 'Em Andamento', description, deadline],
+            `INSERT INTO processes (client_id, case_number, type, status, description, deadline, phase, city, state, traffic_agency, court) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [client_id, case_number, type, status || 'Em Andamento', description, deadline, phase, city, state, traffic_agency, court],
             function (err) {
                 if (err) {
                     return res.status(500).json({ error: 'Erro ao criar processo' });
@@ -86,7 +90,12 @@ router.post('/', authenticate, (req, res) => {
                     type,
                     status: status || 'Em Andamento',
                     description,
-                    deadline
+                    deadline,
+                    phase,
+                    city,
+                    state,
+                    traffic_agency,
+                    court
                 });
             }
         );
@@ -95,11 +104,13 @@ router.post('/', authenticate, (req, res) => {
 
 // Update process
 router.put('/:id', authenticate, (req, res) => {
-    const { case_number, type, status, description, deadline } = req.body;
+    const { case_number, type, status, description, deadline, phase, city, state, traffic_agency, court } = req.body;
 
     db.run(
-        'UPDATE processes SET case_number = ?, type = ?, status = ?, description = ?, deadline = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [case_number, type, status, description, deadline, req.params.id],
+        `UPDATE processes 
+         SET case_number = ?, type = ?, status = ?, description = ?, deadline = ?, phase = ?, city = ?, state = ?, traffic_agency = ?, court = ?, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [case_number, type, status, description, deadline, phase, city, state, traffic_agency, court, req.params.id],
         (err) => {
             if (err) {
                 return res.status(500).json({ error: 'Erro ao atualizar processo' });
@@ -116,6 +127,101 @@ router.delete('/:id', authenticate, (req, res) => {
             return res.status(500).json({ error: 'Erro ao deletar processo' });
         }
         res.json({ message: 'Processo deletado com sucesso' });
+    });
+});
+
+// ==========================================
+// ATTACHMENTS - Upload de Arquivos
+// ==========================================
+
+// Upload arquivo para processo
+router.post('/:id/attachments', authenticate, upload.single('file'), (req, res) => {
+    const processId = req.params.id;
+    const file = req.file;
+
+    if (!file) {
+        return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    // Salvar no banco
+    const query = `
+        INSERT INTO attachments (process_id, filename, original_name, file_type, file_size, uploaded_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.run(query, [processId, file.filename, file.originalname, file.mimetype, file.size, req.user.id], function (err) {
+        if (err) {
+            // Deletar arquivo se falhar no banco
+            fs.unlink(file.path, () => { });
+            return res.status(500).json({ error: 'Erro ao salvar arquivo' });
+        }
+
+        res.status(201).json({
+            id: this.lastID,
+            filename: file.filename,
+            original_name: file.originalname,
+            file_type: file.mimetype,
+            file_size: file.size
+        });
+    });
+});
+
+// Listar anexos de um processo
+router.get('/:id/attachments', authenticate, (req, res) => {
+    const query = `
+        SELECT a.*, u.name as uploaded_by_name 
+        FROM attachments a
+        LEFT JOIN users u ON a.uploaded_by = u.id
+        WHERE a.process_id = ?
+        ORDER BY a.created_at DESC
+    `;
+
+    db.all(query, [req.params.id], (err, attachments) => {
+        if (err) {
+            return res.status(500).json({ error: 'Erro ao buscar anexos' });
+        }
+        res.json(attachments);
+    });
+});
+
+// Download arquivo
+router.get('/attachments/:id/download', authenticate, (req, res) => {
+    db.get('SELECT * FROM attachments WHERE id = ?', [req.params.id], (err, attachment) => {
+        if (err || !attachment) {
+            return res.status(404).json({ error: 'Arquivo não encontrado' });
+        }
+
+        const filePath = path.join(__dirname, '../../uploads', attachment.filename);
+
+        // Verificar se arquivo existe
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Arquivo não encontrado no servidor' });
+        }
+
+        res.download(filePath, attachment.original_name);
+    });
+});
+
+// Deletar arquivo
+router.delete('/attachments/:id', authenticate, (req, res) => {
+    db.get('SELECT * FROM attachments WHERE id = ?', [req.params.id], (err, attachment) => {
+        if (err || !attachment) {
+            return res.status(404).json({ error: 'Arquivo não encontrado' });
+        }
+
+        // Deletar arquivo físico
+        const filePath = path.join(__dirname, '../../uploads', attachment.filename);
+        fs.unlink(filePath, (err) => {
+            // Ignorar erro se arquivo não existir
+        });
+
+        // Deletar do banco
+        db.run('DELETE FROM attachments WHERE id = ?', [req.params.id], (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Erro ao deletar arquivo' });
+            }
+            res.json({ message: 'Arquivo deletado com sucesso' });
+        });
     });
 });
 
