@@ -8,13 +8,26 @@ const fs = require('fs');
 
 // Get all processes (filtered by partnership for admin, by user for lawyers)
 router.get('/', authenticate, (req, res) => {
+    const includeArchived = req.query.archived === 'true';
+
     let query = `
-    SELECT p.*, c.name as client_name, c.phone as client_phone, c.partnership_type
+    SELECT p.*, c.name as client_name, c.phone as client_phone, c.partnership_type, u.name as lawyer_name
     FROM processes p 
     JOIN clients c ON p.client_id = c.id
+    LEFT JOIN users u ON c.user_id = u.id
     WHERE 1=1
   `;
     let params = [];
+
+    // Filter archived processes
+    if (!includeArchived) {
+        query += ' AND p.status != ?';
+        params.push('Arquivado');
+    } else {
+        // Only show archived
+        query += ' AND p.status = ?';
+        params.push('Arquivado');
+    }
 
     // Admin AVADA sees only processes from AVADA clients
     if (req.user.role === 'admin') {
