@@ -175,10 +175,7 @@ const initDatabase = () => {
     // db.get("SELECT COUNT(*) as count FROM clients", [], (err, row) => {
     //   if (row.count === 0) {
     //      // Fake data removed
-    //   }
-    // });
   });
-};
 };
 
 initDatabase();
