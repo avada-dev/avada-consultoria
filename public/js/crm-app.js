@@ -1159,7 +1159,6 @@ async function submitPasswordChange() {
     alert('Erro ao alterar senha: ' + (error.message || 'Senha atual incorreta'));
   }
 }
-}
 
 // ==========================================
 // CALCULATOR FUNCTIONS
