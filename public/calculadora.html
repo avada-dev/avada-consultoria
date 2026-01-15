@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVADA - Calculadora de Prazos Processuais</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .result-card {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background-color: white;
+            }
+
+            #main-container {
+                box-shadow: none;
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+
+        #res-texto {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-3xl bg-white rounded-lg shadow-md p-6 md:p-8" id="main-container">
+
+        <header class="text-center mb-8" id="header-content">
+            <h1 class="text-3xl font-bold text-gray-800">AVADA - Calculadora de Prazos Processuais</h1>
+            <p class="text-gray-500 mt-2">Calcule seus prazos com base nas regras do CPC/2015 e nas novas resoluções do
+                CNJ.</p>
+        </header>
+
+        <main>
+            <div class="space-y-4" id="input-section">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="tribunal" class="block text-sm font-medium text-gray-700 mb-1">Tribunal (Define os
+                            Feriados da Capital)</label>
+                        <select id="tribunal"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <optgroup label="Tribunais Superiores">
+                                <option value="STF">STF - Supremo Tribunal Federal</option>
+                                <option value="STJ">STJ - Superior Tribunal de Justiça</option>
+                            </optgroup>
+                            <optgroup label="Justiça Federal (TRFs)">
+                                <option value="TRF1">TRF da 1ª Região</option>
+                                <option value="TRF2">TRF da 2ª Região</option>
+                                <option value="TRF3">TRF da 3ª Região</option>
+                                <option value="TRF4">TRF da 4ª Região</option>
+                                <option value="TRF5">TRF da 5ª Região</option>
+                                <option value="TRF6">TRF da 6ª Região</option>
+                            </optgroup>
+                            <optgroup label="Justiça Estadual (TJs)">
+                                <option value="TJAC">TJAC - Acre</option>
+                                <option value="TJAL">TJAL - Alagoas</option>
+                                <option value="TJAP">TJAP - Amapá</option>
+                                <option value="TJAM">TJAM - Amazonas</option>
+                                <option value="TJBA">TJBA - Bahia</option>
+                                <option value="TJCE">TJCE - Ceará</option>
+                                <option value="TJDF">TJDFT - Distrito Federal</option>
+                                <option value="TJES">TJES - Espírito Santo</option>
+                                <option value="TJGO">TJGO - Goiás</option>
+                                <option value="TJMA">TJMA - Maranhão</option>
+                                <option value="TJMT">TJMT - Mato Grosso</option>
+                                <option value="TJMS">TJMS - Mato Grosso do Sul</option>
+                                <option value="TJMG">TJMG - Minas Gerais</option>
+                                <option value="TJPA">TJPA - Pará</option>
+                                <option value="TJPB">TJPB - Paraíba</option>
+                                <option value="TJPR">TJPR - Paraná</option>
+                                <option value="TJPE">TJPE - Pernambuco</option>
+                                <option value="TJPI">TJPI - Piauí</option>
+                                <option value="TJRJ">TJRJ - Rio de Janeiro</option>
+                                <option value="TJRN">TJRN - Rio Grande do Norte</option>
+                                <option value="TJRS">TJRS - Rio Grande do Sul</option>
+                                <option value="TJRO">TJRO - Rondônia</option>
+                                <option value="TJRR">TJRR - Roraima</option>
+                                <option value="TJSC">TJSC - Santa Catarina</option>
+                                <option value="TJSP">TJSP - São Paulo</option>
+                                <option value="TJSE">TJSE - Sergipe</option>
+                                <option value="TJTO">TJTO - Tocantins</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="comarca" class="block text-sm font-medium text-gray-700 mb-1">Comarca
+                            (Cidade)</label>
+                        <input type="text" id="comarca"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Ex: Fortaleza (para 1ª Instância)">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="tipoCausa" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Causa /
+                        Instância</label>
+                    <select id="tipoCausa"
+                        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="civel_est_1">Justiça Estadual - 1ª Instância (Cível/Outros)</option>
+                        <option value="jec_est">Justiça Estadual - Juizado Especial Cível</option>
+                        <option value="jefp_est">Justiça Estadual - Juizado da Fazenda Pública</option>
+                        <option value="civel_fed_1">Justiça Federal - 1ª Instância (Vara Federal)</option>
+                        <option value="jef_fed">Justiça Federal - Juizado Especial Federal</option>
+                        <option value="recurso_2_inst">Recurso (2ª Instância - TJ/TRF)</option>
+                        <option value="recurso_sup">Recurso (Tribunais Superiores - STJ/STF)</option>
+                        <option value="penal">Processo Penal (Regras Próprias)</option>
+                    </select>
+                </div>
+
+                <div class="bg-blue-50 p-3 rounded-md border border-blue-100">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Forma de Contagem (Regra
+                        CPC/CNJ)</label>
+                    <div class="flex space-x-6">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="tipoContagem" value="uteis"
+                                class="form-radio text-indigo-600 h-5 w-5" checked>
+                            <span class="ml-2 text-gray-800">Dias Úteis (Regra Geral CPC)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="tipoContagem" value="corridos"
+                                class="form-radio text-indigo-600 h-5 w-5">
+                            <span class="ml-2 text-gray-800">Dias Corridos (Penal/Juizados Específicos)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="publicacaoTexto" class="block text-sm font-medium text-gray-700 mb-1">Colar Texto da
+                        Publicação (Opcional)</label>
+                    <textarea id="publicacaoTexto" rows="4"
+                        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-xs"
+                        placeholder="Cole aqui o texto do DJEN... A IA tentará extrair a data e o prazo se os campos abaixo estiverem vazios."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="dataEvento" class="block text-sm font-medium text-gray-700 mb-1">Data da
+                            Publicação</label>
+                        <input type="date" id="dataEvento"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="tipoEvento" class="block text-sm font-medium text-gray-700 mb-1">Tipo de
+                            Evento</label>
+                        <select id="tipoEvento"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="publicacao_dje">Publicação no Diário de Justiça (DJe/DJEN)</option>
+                            <option value="juntada_ar_mandado">Juntada de AR / Mandado Cumprido</option>
+                            <optgroup label="Domicílio Judicial Eletrônico">
+                                <option value="citacao_confirmada_dje">CITAÇÃO Confirmada (Leitura)</option>
+                                <option value="intimacao_confirmada_dje">INTIMAÇÃO Confirmada (Leitura)</option>
+                                <option value="citacao_tacita_publica">CITAÇÃO Tácita (Pública - sem leitura)</option>
+                                <option value="intimacao_tacita">INTIMAÇÃO Tácita (Demais - sem leitura)</option>
+                                <option value="citacao_tacita_privada">CITAÇÃO Tácita (Privada - sem leitura)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="prazoDias" class="block text-sm font-medium text-gray-700 mb-1">Prazo</label>
+                    <select id="prazoDias"
+                        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="5">5 dias</option>
+                        <option value="10">10 dias</option>
+                        <option value="15" selected>15 dias</option>
+                        <option value="30">30 dias</option>
+                    </select>
+                </div>
+
+                <button id="calcularBtn"
+                    class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                    1. Buscar Feriados (IA)
+                </button>
+            </div>
+        </main>
+
+        <div id="resultado" class="bg-gray-50 rounded-lg p-6 border border-gray-200 hidden result-card mt-8">
+            <div id="input-summary" class="mb-6 border-b pb-4 hidden">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">Dados do Processo e da Publicação</h3>
+                <div class="grid grid-cols-1 gap-2 text-sm text-gray-700">
+                    <p><span class="font-semibold">Tribunal:</span> <span id="res-tribunal"></span></p>
+                    <p><span class="font-semibold">Comarca:</span> <span id="res-comarca"></span></p>
+                    <p><span class="font-semibold">Causa/Instância:</span> <span id="res-causa"></span></p>
+                    <div id="res-texto-container"
+                        class="mt-2 p-3 bg-gray-100 rounded text-xs border border-gray-200 hidden">
+                        <span class="font-semibold not-italic">Texto da Publicação:</span><br>
+                        <span id="res-texto"></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <p><span class="font-semibold">Data do Evento:</span> <span id="res-data"></span></p>
+                        <p><span class="font-semibold">Prazo:</span> <span id="res-prazo"></span></p>
+                    </div>
+                    <p><span class="font-semibold">Tipo de Evento:</span> <span id="res-tipo-evento"></span></p>
+                    <p><span class="font-semibold">Contagem:</span> <span id="res-tipo-contagem"></span></p>
+                </div>
+            </div>
+
+            <div id="gemini-initial-report"></div>
+            <div id="deep-research-results" class="mt-4 hidden"></div>
+            <div id="final-calculation-report" class="mt-4"></div>
+
+            <div id="action-buttons" class="mt-8 pt-4 border-t hidden no-print">
+                <div id="calculate-container">
+                    <button id="doCalculateBtn"
+                        class="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 shadow-md">
+                        Efetuar Cálculo do Prazo
+                    </button>
+                </div>
+                <div id="deep-research-container" class="mt-3 md:mt-0">
+                    <button id="deepResearchBtn"
+                        class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-md">
+                        Realizar Pesquisa Aprofundada
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-8 no-print">
+            <p class="text-xs text-gray-400">
+                <strong>Aviso:</strong> Ferramenta de auxílio. Verifique sempre as normas oficiais.
+            </p>
+        </footer>
+    </div>
+
+    <script src="js/calculadora-prazos.js?v=1.0"></script>
+</body>
+
+</html>
