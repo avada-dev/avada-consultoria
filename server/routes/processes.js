@@ -149,6 +149,41 @@ router.delete('/:id', authenticate, (req, res) => {
     });
 });
 
+// Archive process (only updates status field)
+router.patch('/:id/archive', authenticate, (req, res) => {
+    db.run(
+        `UPDATE processes SET status = 'Arquivado', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [req.params.id],
+        function (err) {
+            if (err) {
+                return res.status(500).json({ error: 'Erro ao arquivar processo' });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Processo não encontrado' });
+            }
+            res.json({ message: 'Processo arquivado com sucesso' });
+        }
+    );
+});
+
+// Unarchive process (restore to 'Em Andamento')
+router.patch('/:id/unarchive', authenticate, (req, res) => {
+    db.run(
+        `UPDATE processes SET status = 'Em Andamento', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [req.params.id],
+        function (err) {
+            if (err) {
+                return res.status(500).json({ error: 'Erro ao desarquivar processo' });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Processo não encontrado' });
+            }
+            res.json({ message: 'Processo desarquivado com sucesso' });
+        }
+    );
+});
+
+
 // ==========================================
 // ATTACHMENTS - Upload de Arquivos
 // ==========================================

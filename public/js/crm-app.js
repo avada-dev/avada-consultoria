@@ -581,22 +581,22 @@ async function saveProcess() {
 async function archiveProcess(id) {
   if (!confirm('Deseja arquivar este processo?')) return;
   try {
-    // Just update status to 'Arquivado'
-    await fetchAPI(`/processes/${id}`, 'PUT', { status: 'Arquivado' });
+    await fetchAPI(`/processes/${id}/archive`, 'PATCH');
+    alert('Processo arquivado com sucesso!');
     loadProcesses(false); // Reload active
   } catch (error) {
-    alert('Erro ao arquivar processo');
+    alert('Erro ao arquivar processo: ' + (error.message || 'Erro desconhecido'));
   }
 }
 
 async function unarchiveProcess(id) {
   if (!confirm('Deseja desarquivar este processo?')) return;
   try {
-    // Update status to 'Em Andamento' for unarchiving
-    await fetchAPI(`/processes/${id}`, 'PUT', { status: 'Em Andamento' });
+    await fetchAPI(`/processes/${id}/unarchive`, 'PATCH');
+    alert('Processo desarquivado com sucesso!');
     loadProcesses(true); // Reload archived
   } catch (error) {
-    alert('Erro ao desarquivar processo');
+    alert('Erro ao desarquivar processo: ' + (error.message || 'Erro desconhecido'));
   }
 }
 
