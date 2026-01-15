@@ -18,16 +18,6 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Initialize database
 require('./database');
 
-// Auto-seed check
-setTimeout(() => {
-    try {
-        const { checkAndSeed } = require('./utils/auto-seed');
-        checkAndSeed();
-    } catch (e) {
-        console.error('Auto-seed failed:', e);
-    }
-}, 1000); // Wait for DB init
-
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/clients', require('./routes/clients'));

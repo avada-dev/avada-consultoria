@@ -115,81 +115,60 @@ const initDatabase = () => {
     `);
 
     // Check if admin exists
-    // ENSURE DEFAULT USERS EXIST AND HAVE ACCURATE PASSWORDS
-    // This runs on every startup to fix any login issues automatically
-    const users = [
-      {
-        email: 'victorvitrine02@gmail.com',
-        password: 'avada2024',
-        name: 'AVADA',
-        role: 'admin',
-        phone: '(85) 99615-0912',
-        oab: 'CRA/CE nº 5-763'
-      },
-      {
-        email: 'florianoteodoro.advogado@hotmail.com',
-        password: 'advogado2024',
-        name: 'Dr. Floriano Aparecido Teodoro',
-        role: 'lawyer',
-        phone: '(18) 99715-0056',
-        oab: 'OAB/SP 144811'
-      },
-      {
-        email: 'carolinafortesadvocacia@gmail.com',
-        password: 'advogado2024',
-        name: 'Dra. Carolina Fortes',
-        role: 'lawyer',
-        phone: '(31) 98206-5842',
-        oab: 'OAB/MG 144.551'
-      },
-      {
-        email: 'ricardomachadocunhaadv@gmail.com',
-        password: 'advogado2024',
-        name: 'Dr. Ricardo Machado',
-        role: 'lawyer',
-        phone: '(12) 98846-3633',
-        oab: 'OAB/SP 428.536'
-      },
-      {
-        email: 'joadnoribeiro@gmail.com',
-        password: 'advogado2024',
-        name: 'Dr. Joadno de Deus Ribeiro',
-        role: 'lawyer',
-        phone: '(21) 974490650',
-        oab: 'OAB/RJ 199312'
-      }
-    ];
-
-    db.serialize(() => {
-      users.forEach(user => {
-        const hash = bcrypt.hashSync(user.password, 10);
-
-        db.get("SELECT id FROM users WHERE email = ?", [user.email], (err, row) => {
-          if (err) {
-            console.error('Error checking user:', err);
-            return;
+    db.get("SELECT * FROM users WHERE email = ?", ['victorvitrine02@gmail.com'], (err, row) => {
+      if (!row) {
+        // Seed initial users
+        const users = [
+          {
+            email: 'victorvitrine02@gmail.com',
+            password: bcrypt.hashSync('avada2024', 10),
+            name: 'AVADA',
+            role: 'admin',
+            phone: '(85) 99615-0912',
+            oab: 'CRA/CE nº 5-763'
+          },
+          {
+            email: 'florianoteodoro.advogado@hotmail.com',
+            password: bcrypt.hashSync('advogado2024', 10),
+            name: 'Dr. Floriano Aparecido Teodoro',
+            role: 'lawyer',
+            phone: '(18) 99715-0056',
+            oab: 'OAB/SP 144811'
+          },
+          {
+            email: 'carolinafortesadvocacia@gmail.com',
+            password: bcrypt.hashSync('advogado2024', 10),
+            name: 'Dra. Carolina Fortes',
+            role: 'lawyer',
+            phone: '(31) 98206-5842',
+            oab: 'OAB/MG 144.551'
+          },
+          {
+            email: 'ricardomachadocunhaadv@gmail.com',
+            password: bcrypt.hashSync('advogado2024', 10),
+            name: 'Dr. Ricardo Machado',
+            role: 'lawyer',
+            phone: '(12) 98846-3633',
+            oab: 'OAB/SP 428.536'
+          },
+          {
+            email: 'joadnoribeiro@gmail.com',
+            password: bcrypt.hashSync('advogado2024', 10),
+            name: 'Dr. Joadno de Deus Ribeiro',
+            role: 'lawyer',
+            phone: '(21) 974490650',
+            oab: 'OAB/RJ 199312'
           }
+        ];
 
-          if (row) {
-            // User exists, FORCE update password
-            db.run("UPDATE users SET password = ?, name = ?, role = ?, phone = ?, oab = ? WHERE id = ?",
-              [hash, user.name, user.role, user.phone, user.oab, row.id],
-              (err) => {
-                if (!err) console.log(`✅ Credenciais atualizadas para: ${user.email}`);
-              }
-            );
-          } else {
-            // User missing, INSERT
-            db.run("INSERT INTO users (email, password, name, role, phone, oab) VALUES (?, ?, ?, ?, ?, ?)",
-              [user.email, hash, user.name, user.role, user.phone, user.oab],
-              (err) => {
-                if (!err) console.log(`✅ Usuário criado: ${user.email}`);
-              }
-            );
-          }
+        const stmt = db.prepare("INSERT INTO users (email, password, name, role, phone, oab) VALUES (?, ?, ?, ?, ?, ?)");
+        users.forEach(user => {
+          stmt.run(user.email, user.password, user.name, user.role, user.phone, user.oab);
         });
-      });
-      console.log('🔄 Verificação de usuários concluída.');
+        stmt.finalize();
+
+        console.log('✅ Database initialized with default users');
+      }
     });
 
     // Seed some sample clients and processes -> REMOVED per user request
