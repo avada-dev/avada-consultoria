@@ -77,7 +77,11 @@
                 </div>
                 <div class="menu-item" data-view="processes">
                     <span class="menu-icon"><i class="fas fa-folder-open"></i></span>
-                    <span>Processos</span>
+                    <span>Processos Ativos</span>
+                </div>
+                <div class="menu-item" data-view="archived">
+                    <span class="menu-icon"><i class="fas fa-archive"></i></span>
+                    <span>Arquivados</span>
                 </div>
                 <div class="menu-item admin-only hidden" data-view="system-info">
                     <span class="menu-icon"><i class="fas fa-info-circle"></i></span>
@@ -249,6 +253,119 @@
                                 Emenda à Inicial (sempre reforce o pedido de gratuidade de justiça)</option>
                             <option value="Pedido de Autotutela">17. Pedido de Autotutela</option>
                         </select>
+                    </div>
+
+                    <!-- ÓRGÃO DE TRÂNSITO -->
+                    <div class="form-group">
+                        <label class="form-label">Órgão de Trânsito</label>
+                        <select id="process-agency" class="form-input" onchange="toggleOtherField('agency')">
+                            <option value="">Selecione...</option>
+                            <optgroup label="Nacional">
+                                <option value="CONTRAN">CONTRAN</option>
+                                <option value="DENATRAN">DENATRAN/SENATRAN</option>
+                                <option value="PRF">PRF - Polícia Rodoviária Federal</option>
+                                <option value="DNIT">DNIT</option>
+                            </optgroup>
+                            <optgroup label="Estaduais (DETRAN)">
+                                <option value="DETRAN-AC">DETRAN-AC</option>
+                                <option value="DETRAN-AL">DETRAN-AL</option>
+                                <option value="DETRAN-AP">DETRAN-AP</option>
+                                <option value="DETRAN-AM">DETRAN-AM</option>
+                                <option value="DETRAN-BA">DETRAN-BA</option>
+                                <option value="DETRAN-CE">DETRAN-CE</option>
+                                <option value="DETRAN-DF">DETRAN-DF</option>
+                                <option value="DETRAN-ES">DETRAN-ES</option>
+                                <option value="DETRAN-GO">DETRAN-GO</option>
+                                <option value="DETRAN-MA">DETRAN-MA</option>
+                                <option value="DETRAN-MT">DETRAN-MT</option>
+                                <option value="DETRAN-MS">DETRAN-MS</option>
+                                <option value="DETRAN-MG">DETRAN-MG</option>
+                                <option value="DETRAN-PA">DETRAN-PA</option>
+                                <option value="DETRAN-PB">DETRAN-PB</option>
+                                <option value="DETRAN-PR">DETRAN-PR</option>
+                                <option value="DETRAN-PE">DETRAN-PE</option>
+                                <option value="DETRAN-PI">DETRAN-PI</option>
+                                <option value="DETRAN-RJ">DETRAN-RJ</option>
+                                <option value="DETRAN-RN">DETRAN-RN</option>
+                                <option value="DETRAN-RS">DETRAN-RS</option>
+                                <option value="DETRAN-RO">DETRAN-RO</option>
+                                <option value="DETRAN-RR">DETRAN-RR</option>
+                                <option value="DETRAN-SC">DETRAN-SC</option>
+                                <option value="DETRAN-SP">DETRAN-SP</option>
+                                <option value="DETRAN-SE">DETRAN-SE</option>
+                                <option value="DETRAN-TO">DETRAN-TO</option>
+                            </optgroup>
+                            <optgroup label="Municipais (Capitais)">
+                                <option value="AMC Fortaleza">AMC - Fortaleza</option>
+                                <option value="CET São Paulo">CET - São Paulo</option>
+                                <option value="CET-Rio">CET-Rio</option>
+                                <option value="Transalvador">Transalvador</option>
+                                <option value="EPTC Porto Alegre">EPTC - Porto Alegre</option>
+                                <option value="BHTrans">BHTrans - Belo Horizonte</option>
+                                <option value="Manaustrans">Manaustrans</option>
+                            </optgroup>
+                            <optgroup label="Outros">
+                                <option value="DER">DER - Departamento de Estradas de Rodagem</option>
+                                <option value="JARI">JARI (Genérico)</option>
+                                <option value="CETRAN">CETRAN (Genérico)</option>
+                                <option value="Outro">Outro (Especificar)</option>
+                            </optgroup>
+                        </select>
+                        <input type="text" id="process-agency-other" class="form-input mt-2" style="display: none;"
+                            placeholder="Especifique o Órgão...">
+                    </div>
+
+                    <!-- TRIBUNAL -->
+                    <div class="form-group">
+                        <label class="form-label">Tribunal</label>
+                        <select id="process-court" class="form-input" onchange="toggleOtherField('court')">
+                            <option value="">Selecione...</option>
+                            <optgroup label="Tribunais Superiores">
+                                <option value="STF">STF</option>
+                                <option value="STJ">STJ</option>
+                                <option value="TST">TST</option>
+                            </optgroup>
+                            <optgroup label="Tribunais de Justiça (Estaduais)">
+                                <option value="TJAC">TJAC</option>
+                                <option value="TJAL">TJAL</option>
+                                <option value="TJAP">TJAP</option>
+                                <option value="TJAM">TJAM</option>
+                                <option value="TJBA">TJBA</option>
+                                <option value="TJCE">TJCE</option>
+                                <option value="TJDF">TJDF</option>
+                                <option value="TJES">TJES</option>
+                                <option value="TJGO">TJGO</option>
+                                <option value="TJMA">TJMA</option>
+                                <option value="TJMT">TJMT</option>
+                                <option value="TJMS">TJMS</option>
+                                <option value="TJMG">TJMG</option>
+                                <option value="TJPA">TJPA</option>
+                                <option value="TJPB">TJPB</option>
+                                <option value="TJPR">TJPR</option>
+                                <option value="TJPE">TJPE</option>
+                                <option value="TJPI">TJPI</option>
+                                <option value="TJRJ">TJRJ</option>
+                                <option value="TJRN">TJRN</option>
+                                <option value="TJRS">TJRS</option>
+                                <option value="TJRO">TJRO</option>
+                                <option value="TJRR">TJRR</option>
+                                <option value="TJSC">TJSC</option>
+                                <option value="TJSP">TJSP</option>
+                                <option value="TJSE">TJSE</option>
+                                <option value="TJTO">TJTO</option>
+                            </optgroup>
+                            <optgroup label="Tribunais Regionais Federais">
+                                <option value="TRF1">TRF1</option>
+                                <option value="TRF2">TRF2</option>
+                                <option value="TRF3">TRF3</option>
+                                <option value="TRF4">TRF4</option>
+                                <option value="TRF5">TRF5</option>
+                                <option value="TRF6">TRF6</option>
+                            </optgroup>
+                            <option value="Outro">Outro (Especificar)</option>
+                        </select>
+                        <input type="text" id="process-court-other" class="form-input mt-2" style="display: none;"
+                            placeholder="Especifique o Tribunal...">
                     </div>
 
                     <!-- STATUS -->
