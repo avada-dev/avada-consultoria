@@ -1159,3 +1159,77 @@ async function submitPasswordChange() {
     alert('Erro ao alterar senha: ' + (error.message || 'Senha atual incorreta'));
   }
 }
+}
+
+// ==========================================
+// CALCULATOR FUNCTIONS
+// ==========================================
+
+async function calculateDeadline() {
+  const startDate = document.getElementById('deadline-start-date').value;
+  const days = document.getElementById('deadline-days').value;
+  const type = document.getElementById('deadline-type').value;
+  const resultField = document.getElementById('process-deadline');
+  const infoField = document.getElementById('deadline-info');
+
+  if (!startDate || !days) {
+    // Don't clear if user manually editing? 
+    // But this is calculator mode.
+    return;
+  }
+
+  // Visual feedback
+  infoField.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
+
+  try {
+    // Get city/state (could be dynamic later)
+    const city = 'Fortaleza';
+    const state = 'CE';
+
+    const response = await fetch(`${API_URL}/processes/calculate-deadline`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        startDate,
+        days: parseInt(days),
+        type,
+        city,
+        state
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro na API');
+
+    const data = await response.json();
+
+    // Parse ISO to YYYY-MM-DD safe
+    // data.fatalDeadline is e.g. "2026-05-15T00:00:00.000Z"
+    const isoDate = data.fatalDeadline;
+    const safeDate = isoDate.split('T')[0];
+
+    resultField.value = safeDate;
+    const brDate = safeDate.split('-').reverse().join('/');
+
+    // Format details
+    let details = `<strong>Prazo Fatal: ${brDate}</strong><br>`;
+    details += `Dias Úteis: ${data.workingDaysAdded} | Feriados/FDS: ${data.holidaysFound.length}`;
+
+    // Show first 3 holidays if any
+    if (data.holidaysFound.length > 0) {
+      const holidayNames = data.holidaysFound.slice(0, 3).map(h => {
+        const d = h.date.split('T')[0].split('-').reverse().join('/');
+        return `${d} (${h.type})`;
+      }).join(', ');
+      details += `<br><small class="text-xs text-gray-500">${holidayNames}${data.holidaysFound.length > 3 ? '...' : ''}</small>`;
+    }
+
+    infoField.innerHTML = details;
+
+  } catch (error) {
+    console.error(error);
+    infoField.innerText = "Erro ao calcular prazo.";
+  }
+}

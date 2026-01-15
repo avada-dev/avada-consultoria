@@ -244,4 +244,33 @@ router.delete('/attachments/:id', authenticate, (req, res) => {
     });
 });
 
+// Calculate deadline
+router.post('/calculate-deadline', authenticate, async (req, res) => {
+    try {
+        const { startDate, days, type, city, state } = req.body;
+        const { calculateFatalDeadline } = require('../utils/deadline-calculator');
+
+        if (!startDate || !days) {
+            return res.status(400).json({ error: 'Data inicial e dias são obrigatórios' });
+        }
+
+        // Se for "Publicação", o prazo começa a contar no próximo dia útil
+        // O utilitário calculateFatalDeadline já lida com a lógica de "começar no próximo dia útil"
+        // baseada na data de publicação passada.
+
+        // No entanto, se o tipo for "Notificação", geralmente conta do dia ou dia útil seguinte dependendo da regra.
+        // O prompt diz: "Quando escolhido Data da Publicação, significa a data da publicação no Diário Oficial... deve acionar calculadora"
+
+        // Vamos assumir que o utilitário já faz a lógica correta para "Publicação" (CPC).
+        // Para "Notificação", se a regra for a mesma (CPC/CPP), usamos a mesma função.
+
+        const result = await calculateFatalDeadline(startDate, parseInt(days), city, state);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Erro ao calcular prazo:', error);
+        res.status(500).json({ error: 'Erro ao calcular prazo' });
+    }
+});
+
 module.exports = router;
