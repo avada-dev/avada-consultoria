@@ -320,57 +320,159 @@
                             placeholder="Especifique o Órgão...">
                     </div>
 
+                    <!-- ESTADO -->
+                    <div class="form-group">
+                        <label class="form-label">Estado (UF) *</label>
+                        <select id="process-state" class="form-input" required onchange="loadCitiesByState()">
+                            <option value="">Selecione...</option>
+                            <option value="AC">Acre (AC)</option>
+                            <option value="AL">Alagoas (AL)</option>
+                            <option value="AP">Amapá (AP)</option>
+                            <option value="AM">Amazonas (AM)</option>
+                            <option value="BA">Bahia (BA)</option>
+                            <option value="CE">Ceará (CE)</option>
+                            <option value="DF">Distrito Federal (DF)</option>
+                            <option value="ES">Espírito Santo (ES)</option>
+                            <option value="GO">Goiás (GO)</option>
+                            <option value="MA">Maranhão (MA)</option>
+                            <option value="MT">Mato Grosso (MT)</option>
+                            <option value="MS">Mato Grosso do Sul (MS)</option>
+                            <option value="MG">Minas Gerais (MG)</option>
+                            <option value="PA">Pará (PA)</option>
+                            <option value="PB">Paraíba (PB)</option>
+                            <option value="PR">Paraná (PR)</option>
+                            <option value="PE">Pernambuco (PE)</option>
+                            <option value="PI">Piauí (PI)</option>
+                            <option value="RJ">Rio de Janeiro (RJ)</option>
+                            <option value="RN">Rio Grande do Norte (RN)</option>
+                            <option value="RS">Rio Grande do Sul (RS)</option>
+                            <option value="RO">Rondônia (RO)</option>
+                            <option value="RR">Roraima (RR)</option>
+                            <option value="SC">Santa Catarina (SC)</option>
+                            <option value="SP">São Paulo (SP)</option>
+                            <option value="SE">Sergipe (SE)</option>
+                            <option value="TO">Tocantins (TO)</option>
+                        </select>
+                    </div>
+
+                    <!-- CIDADE -->
+                    <div class="form-group">
+                        <label class="form-label">Cidade/Comarca *</label>
+                        <select id="process-city" class="form-input" required>
+                            <option value="">Selecione primeiro o Estado</option>
+                        </select>
+                    </div>
+
                     <!-- TRIBUNAL -->
                     <div class="form-group">
                         <label class="form-label">Tribunal</label>
                         <select id="process-court" class="form-input" onchange="toggleOtherField('court')">
                             <option value="">Selecione...</option>
                             <optgroup label="Tribunais Superiores">
-                                <option value="STF">STF</option>
-                                <option value="STJ">STJ</option>
-                                <option value="TST">TST</option>
-                            </optgroup>
-                            <optgroup label="Tribunais de Justiça (Estaduais)">
-                                <option value="TJAC">TJAC</option>
-                                <option value="TJAL">TJAL</option>
-                                <option value="TJAP">TJAP</option>
-                                <option value="TJAM">TJAM</option>
-                                <option value="TJBA">TJBA</option>
-                                <option value="TJCE">TJCE</option>
-                                <option value="TJDF">TJDF</option>
-                                <option value="TJES">TJES</option>
-                                <option value="TJGO">TJGO</option>
-                                <option value="TJMA">TJMA</option>
-                                <option value="TJMT">TJMT</option>
-                                <option value="TJMS">TJMS</option>
-                                <option value="TJMG">TJMG</option>
-                                <option value="TJPA">TJPA</option>
-                                <option value="TJPB">TJPB</option>
-                                <option value="TJPR">TJPR</option>
-                                <option value="TJPE">TJPE</option>
-                                <option value="TJPI">TJPI</option>
-                                <option value="TJRJ">TJRJ</option>
-                                <option value="TJRN">TJRN</option>
-                                <option value="TJRS">TJRS</option>
-                                <option value="TJRO">TJRO</option>
-                                <option value="TJRR">TJRR</option>
-                                <option value="TJSC">TJSC</option>
-                                <option value="TJSP">TJSP</option>
-                                <option value="TJSE">TJSE</option>
-                                <option value="TJTO">TJTO</option>
+                                <option value="STF">STF - Supremo Tribunal Federal</option>
+                                <option value="STJ">STJ - Superior Tribunal de Justiça</option>
                             </optgroup>
                             <optgroup label="Tribunais Regionais Federais">
-                                <option value="TRF1">TRF1</option>
-                                <option value="TRF2">TRF2</option>
-                                <option value="TRF3">TRF3</option>
-                                <option value="TRF4">TRF4</option>
-                                <option value="TRF5">TRF5</option>
-                                <option value="TRF6">TRF6</option>
+                                <option value="TRF1">TRF da 1ª Região</option>
+                                <option value="TRF2">TRF da 2ª Região</option>
+                                <option value="TRF3">TRF da 3ª Região</option>
+                                <option value="TRF4">TRF da 4ª Região</option>
+                                <option value="TRF5">TRF da 5ª Região</option>
+                                <option value="TRF6">TRF da 6ª Região</option>
+                            </optgroup>
+                            <optgroup label="Tribunais de Justiça Estaduais">
+                                <option value="TJAC">TJAC - Acre</option>
+                                <option value="TJAL">TJAL - Alagoas</option>
+                                <option value="TJAP">TJAP - Amapá</option>
+                                <option value="TJAM">TJAM - Amazonas</option>
+                                <option value="TJBA">TJBA - Bahia</option>
+                                <option value="TJCE">TJCE - Ceará</option>
+                                <option value="TJDF">TJDFT - Distrito Federal</option>
+                                <option value="TJES">TJES - Espírito Santo</option>
+                                <option value="TJGO">TJGO - Goiás</option>
+                                <option value="TJMA">TJMA - Maranhão</option>
+                                <option value="TJMT">TJMT - Mato Grosso</option>
+                                <option value="TJMS">TJMS - Mato Grosso do Sul</option>
+                                <option value="TJMG">TJMG - Minas Gerais</option>
+                                <option value="TJPA">TJPA - Pará</option>
+                                <option value="TJPB">TJPB - Paraíba</option>
+                                <option value="TJPR">TJPR - Paraná</option>
+                                <option value="TJPE">TJPE - Pernambuco</option>
+                                <option value="TJPI">TJPI - Piauí</option>
+                                <option value="TJRJ">TJRJ - Rio de Janeiro</option>
+                                <option value="TJRN">TJRN - Rio Grande do Norte</option>
+                                <option value="TJRS">TJRS - Rio Grande do Sul</option>
+                                <option value="TJRO">TJRO - Rondônia</option>
+                                <option value="TJRR">TJRR - Roraima</option>
+                                <option value="TJSC">TJSC - Santa Catarina</option>
+                                <option value="TJSP">TJSP - São Paulo</option>
+                                <option value="TJSE">TJSE - Sergipe</option>
+                                <option value="TJTO">TJTO - Tocantins</option>
                             </optgroup>
                             <option value="Outro">Outro (Especificar)</option>
                         </select>
                         <input type="text" id="process-court-other" class="form-input mt-2" style="display: none;"
                             placeholder="Especifique o Tribunal...">
+                    </div>
+
+                    <!-- ÓRGÃO DE TRÂNSITO -->
+                    <div class="form-group">
+                        <label class="form-label">Órgão de Trânsito</label>
+                        <select id="process-agency" class="form-input" onchange="toggleOtherField('agency')">
+                            <option value="">Selecione...</option>
+                            <optgroup label="Nacional">
+                                <option value="CONTRAN">CONTRAN</option>
+                                <option value="DENATRAN">DENATRAN/SENATRAN</option>
+                                <option value="PRF">PRF - Polícia Rodoviária Federal</option>
+                                <option value="DNIT">DNIT</option>
+                            </optgroup>
+                            <optgroup label="Estaduais (DETRAN)">
+                                <option value="DETRAN-AC">DETRAN-AC</option>
+                                <option value="DETRAN-AL">DETRAN-AL</option>
+                                <option value="DETRAN-AP">DETRAN-AP</option>
+                                <option value="DETRAN-AM">DETRAN-AM</option>
+                                <option value="DETRAN-BA">DETRAN-BA</option>
+                                <option value="DETRAN-CE">DETRAN-CE</option>
+                                <option value="DETRAN-DF">DETRAN-DF</option>
+                                <option value="DETRAN-ES">DETRAN-ES</option>
+                                <option value="DETRAN-GO">DETRAN-GO</option>
+                                <option value="DETRAN-MA">DETRAN-MA</option>
+                                <option value="DETRAN-MT">DETRAN-MT</option>
+                                <option value="DETRAN-MS">DETRAN-MS</option>
+                                <option value="DETRAN-MG">DETRAN-MG</option>
+                                <option value="DETRAN-PA">DETRAN-PA</option>
+                                <option value="DETRAN-PB">DETRAN-PB</option>
+                                <option value="DETRAN-PR">DETRAN-PR</option>
+                                <option value="DETRAN-PE">DETRAN-PE</option>
+                                <option value="DETRAN-PI">DETRAN-PI</option>
+                                <option value="DETRAN-RJ">DETRAN-RJ</option>
+                                <option value="DETRAN-RN">DETRAN-RN</option>
+                                <option value="DETRAN-RS">DETRAN-RS</option>
+                                <option value="DETRAN-RO">DETRAN-RO</option>
+                                <option value="DETRAN-RR">DETRAN-RR</option>
+                                <option value="DETRAN-SC">DETRAN-SC</option>
+                                <option value="DETRAN-SP">DETRAN-SP</option>
+                                <option value="DETRAN-SE">DETRAN-SE</option>
+                                <option value="DETRAN-TO">DETRAN-TO</option>
+                            </optgroup>
+                            <optgroup label="Municipais (Capitais)">
+                                <option value="AMC Fortaleza">AMC - Fortaleza</option>
+                                <option value="CET São Paulo">CET - São Paulo</option>
+                                <option value="CET-Rio">CET-Rio</option>
+                                <option value="Transalvador">Transalvador</option>
+                                <option value="EPTC Porto Alegre">EPTC - Porto Alegre</option>
+                                <option value="BHTrans">BHTrans - Belo Horizonte</option>
+                                <option value="Manaustrans">Manaustrans</option>
+                            </optgroup>
+                            <optgroup label="Outros">
+                                <option value="DER">DER - Departamento de Estradas de Rodagem</option>
+                                <option value="JARI">JARI (Genérico)</option>
+                                <option value="CETRAN">CETRAN (Genérico)</option>
+                                <option value="Outro">Outro (Especificar)</option>
+                            </optgroup>
+                        </select>
+                        <input type="text" id="process-agency-other" class="form-input mt-2" style="display: none;"
+                            placeholder="Especifique o Órgão...">
                     </div>
 
                     <!-- STATUS -->
@@ -425,7 +527,8 @@
                         <label class="form-label">Descrição</label>
                         <textarea id="process-description" class="form-input" rows="3"></textarea>
                     </div>
-                    <!-- CALCULADORA DE PRAZOS -->
+
+                    <!-- CALCULADORA DE PRAZOS INTEGRADA -->
                     <div class="form-group"
                         style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         <label class="form-label"
@@ -436,14 +539,14 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <div>
                                 <label class="form-label" style="font-size: 0.85rem;">Tipo de Data</label>
-                                <select id="deadline-type" class="form-input" onchange="calculateDeadline()">
+                                <select id="deadline-type" class="form-input">
                                     <option value="publicacao">Data da Publicação (DJe)</option>
                                     <option value="notificacao">Data da Notificação</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="form-label" style="font-size: 0.85rem;">Dias Úteis</label>
-                                <select id="deadline-days" class="form-input" onchange="calculateDeadline()">
+                                <select id="deadline-days" class="form-input" onchange="calculateProcessDeadline()">
                                     <option value="5">5 Dias</option>
                                     <option value="10">10 Dias</option>
                                     <option value="15">15 Dias</option>
@@ -456,7 +559,7 @@
                             <div>
                                 <label class="form-label" style="font-size: 0.85rem;">Data Inicial</label>
                                 <input type="date" id="deadline-start-date" class="form-input"
-                                    onchange="calculateDeadline()">
+                                    onchange="calculateProcessDeadline()">
                             </div>
                             <div>
                                 <label class="form-label" style="font-size: 0.85rem;">Prazo Fatal</label>
@@ -464,9 +567,16 @@
                                     style="background-color: #e2e8f0; font-weight: bold; color: #2d3748;">
                             </div>
                         </div>
+
                         <div id="deadline-info"
                             style="font-size: 0.8rem; color: #718096; margin-top: 8px; font-style: italic;">
-                            Selecione a data para calcular automaticamente.
+                            A IA buscará automaticamente feriados municipais, estaduais e nacionais.
+                        </div>
+
+                        <div id="deadline-ai-status" style="margin-top: 8px; display: none;">
+                            <div class="text-xs text-blue-600">
+                                <i class="fas fa-spinner fa-spin"></i> Buscando feriados e suspensões via IA...
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -627,6 +737,7 @@
 
     <script src="js/crm-app.js?v=3.2"></script>
     <script src="js/crm-users.js?v=3.2"></script>
+    <script src="js/crm-deadline-calculator.js?v=1.0"></script>
     <script src="js/crm-deadline-alerts.js?v=3.2"></script>
 </body>
 
