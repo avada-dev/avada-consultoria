@@ -491,13 +491,16 @@ function openProcessModal(process = null) {
 
   if (process) {
     title.textContent = 'Editar Processo';
-    document.getElementById('process-id').value = process.id;
-    document.getElementById('process-client').value = process.client_id;
-    document.getElementById('process-case-number').value = process.case_number;
-    document.getElementById('process-type').value = process.type;
-    document.getElementById('process-phase').value = process.phase || '';
-    document.getElementById('process-status').value = process.status;
-    document.getElementById('process-description').value = process.description || '';
+    if (document.getElementById('process-id')) document.getElementById('process-id').value = process.id;
+    if (document.getElementById('process-client')) document.getElementById('process-client').value = process.client_id;
+    if (document.getElementById('process-case-number')) document.getElementById('process-case-number').value = process.case_number;
+    // process-type is replaced by process-category
+    if (document.getElementById('process-process-category')) document.getElementById('process-category').value = process.process_category || process.type || '';
+    if (document.getElementById('process-category')) document.getElementById('process-category').value = process.process_category || process.type || '';
+
+    if (document.getElementById('process-phase')) document.getElementById('process-phase').value = process.phase || '';
+    if (document.getElementById('process-status')) document.getElementById('process-status').value = process.status;
+    if (document.getElementById('process-description')) document.getElementById('process-description').value = process.description || '';
     document.getElementById('process-deadline').value = process.deadline || '';
     document.getElementById('process-partnership').value = process.partnership_type || 'AVADA';
     document.getElementById('process-category').value = process.process_category || '';
@@ -548,7 +551,7 @@ async function saveProcess() {
   const data = {
     client_id: parseInt(document.getElementById('process-client').value),
     case_number: document.getElementById('process-case-number').value,
-    type: document.getElementById('process-type').value,
+    type: document.getElementById('process-category').value, // Use category as type
     phase: document.getElementById('process-phase').value,
     status: document.getElementById('process-status').value,
     description: document.getElementById('process-description').value,
