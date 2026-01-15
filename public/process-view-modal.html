@@ -1,0 +1,76 @@
+<!-- MODAL DE VISUALIZAÇÃO COMPLETA DE PROCESSO -->
+<div id="process-view-modal" class="modal">
+    <div class="modal-content" style="max-width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h2 class="modal-title">Detalhes Completos do Processo</h2>
+            <button class="modal-close" onclick="closeProcessViewModal()">×</button>
+        </div>
+        <div class="modal-body" style="padding: 30px;">
+            <!-- Processo Info -->
+            <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #2d3748; font-size: 1.25rem;">📋 Informações do Processo</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div><strong>Nº do Processo ou AIT:</strong> <span id="view-case-number"></span></div>
+                    <div><strong>Cliente:</strong> <span id="view-client-name"></span></div>
+                    <div><strong>Categoria:</strong> <span id="view-category"></span></div>
+                    <div><strong>Fase:</strong> <span id="view-phase"></span></div>
+                    <div><strong>Status:</strong> <span id="view-status"></span></div>
+                    <div><strong>Prazo:</strong> <span id="view-deadline"></span></div>
+                </div>
+            </div>
+
+            <!-- Location Info -->
+            <div style="background: #edf2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #2d3748; font-size: 1.25rem;">📍 Localização e Jurisdição</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div><strong>Estado:</strong> <span id="view-state"></span></div>
+                    <div><strong>Cidade:</strong> <span id="view-city"></span></div>
+                    <div><strong>Tribunal:</strong> <span id="view-court"></span></div>
+                    <div><strong>Órgão de Trânsito:</strong> <span id="view-agency"></span></div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #2d3748; font-size: 1.25rem;">📝 Descrição</h3>
+                <div id="view-description"
+                    style="background: #fff; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; min-height: 60px;">
+                </div>
+            </div>
+
+            <!-- Observations -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #2d3748; font-size: 1.25rem;">💡 Observações</h3>
+                <textarea id="view-observations" class="form-input" rows="4"
+                    placeholder="Adicione observações sobre o processo..."></textarea>
+            </div>
+
+            <!-- Lawyer Requests -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #2d3748; font-size: 1.25rem;">⚖️ Requisições ao Advogado</h3>
+                <textarea id="view-lawyer-requests" class="form-input" rows="4"
+                    placeholder="Adicione requisições específicas para o advogado..."></textarea>
+            </div>
+
+            <!-- Dates -->
+            <div style="background: #f0fff4; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #2d3748; font-size: 1rem;">🕐 Datas</h3>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.9rem;">
+                    <div><strong>Criado em:</strong> <span id="view-created-at"></span></div>
+                    <div><strong>Atualizado em:</strong> <span id="view-updated-at"></span></div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between;">
+            <button class="btn btn-secondary" onclick="closeProcessViewModal()">Fechar</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="saveProcessObservations()">
+                    <i class="fas fa-save"></i> Salvar Observações
+                </button>
+                <button class="btn btn-success" onclick="editProcessFromView()">
+                    <i class="fas fa-edit"></i> Editar Processo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

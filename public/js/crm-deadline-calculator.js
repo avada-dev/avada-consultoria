@@ -37,6 +37,10 @@ const citiesByState = {
     'TO': ['Palmas', 'Araguaína', 'Gurupi', 'Porto Nacional', 'Paraíso do Tocantins']
 };
 
+// Tornar função global para ser chamada pelo HTML via onchange
+window.loadCitiesByState = loadCitiesByState;
+window.calculateProcessDeadline = calculateProcessDeadline;
+
 // Load cities when state changes
 function loadCitiesByState() {
     const stateSelect = document.getElementById('process-state');

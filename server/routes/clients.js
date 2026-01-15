@@ -136,6 +136,44 @@ router.delete('/:id', authenticate, (req, res) => {
     });
 });
 
+// Archive/Un
+
+archive client
+router.patch('/:id/archive', authenticate, (req, res) => {
+    const { id } = req.params;
+    const { archived } = req.body; // 1 = archived, 0 = active
+
+    db.get('SELECT * FROM clients WHERE id = ?', [id], (err, client) => {
+        if (err) {
+            return res.status(500).json({ error: 'Erro ao buscar cliente' });
+        }
+
+        if (!client) {
+            return res.status(404).json({ error: 'Cliente não encontrado' });
+        }
+
+        if (req.user.role === 'lawyer' && client.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Acesso negado' });
+        }
+
+        db.run(
+            'UPDATE clients SET archived = ? WHERE id = ?',
+            [archived ? 1 : 0, id],
+            function (err) {
+                if (err) {
+                    console.error('Error archiving client:', err);
+                    return res.status(500).json({ error: 'Failed to archive client' });
+                }
+
+                res.json({
+                    success: true,
+                    message: archived ? 'Cliente arquivado com sucesso' : 'Cliente desarquivado com sucesso'
+                });
+            }
+        );
+    });
+});
+
 // ==========================================
 // FULL CLIENT FOLDER - Pasta Completa
 // ==========================================

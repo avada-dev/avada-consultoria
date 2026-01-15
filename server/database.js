@@ -85,8 +85,15 @@ const initDatabase = () => {
     db.run(`ALTER TABLE processes ADD COLUMN holidays_info TEXT`, (err) => { });
     db.run(`ALTER TABLE processes ADD COLUMN suspensions_info TEXT`, (err) => { });
 
+    // New fields for process observations and lawyer requests
+    db.run(`ALTER TABLE processes ADD COLUMN observations TEXT`, (err) => { });
+    db.run(`ALTER TABLE processes ADD COLUMN lawyer_requests TEXT`, (err) => { });
+
     // Add partnership column to clients
     db.run(`ALTER TABLE clients ADD COLUMN partnership_type TEXT DEFAULT 'PARTICULAR'`, (err) => { });
+
+    // Add archived column to clients
+    db.run(`ALTER TABLE clients ADD COLUMN archived INTEGER DEFAULT 0`, (err) => { });
 
     // Settings table for system configurations
     db.run(`
