@@ -208,7 +208,7 @@ async function loadDashboard() {
 
     const html = `
       <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat-card" onclick="switchView('clients')" style="cursor: pointer;" title="Clique para ver todos os clientes">
           <div class="stat-icon blue">
             <i class="fas fa-users"></i>
           </div>
@@ -216,7 +216,7 @@ async function loadDashboard() {
           <div class="stat-label">Total de Clientes</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" onclick="switchView('processes')" style="cursor: pointer;" title="Clique para ver todos os processos">
           <div class="stat-icon green">
             <i class="fas fa-folder-open"></i>
           </div>
@@ -224,7 +224,7 @@ async function loadDashboard() {
           <div class="stat-label">Total de Processos</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" onclick="switchView('processes')" style="cursor: pointer;" title="Clique para ver processos ativos">
           <div class="stat-icon orange">
             <i class="fas fa-clock"></i>
           </div>
@@ -232,7 +232,7 @@ async function loadDashboard() {
           <div class="stat-label">Em Andamento</div>
         </div>
         
-        <div class="stat-card">
+        <div class="stat-card" onclick="switchView('archived')" style="cursor: pointer;" title="Clique para ver processos arquivados">
           <div class="stat-icon purple">
             <i class="fas fa-check-circle"></i>
           </div>

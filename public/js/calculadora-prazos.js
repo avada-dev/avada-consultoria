@@ -1,5 +1,7 @@
-// --- CHAVE DA API GEMINI ---
-const GEMINI_API_KEY = "AIzaSyCDcLLQol77KpeOqpa3U0lmfwc1uHUHdAY";
+// API Configuration
+const API_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:3000/api'
+    : '/api';
 
 // --- LÓGICA DE DATAS ---
 function getEaster(year) {
@@ -240,31 +242,26 @@ function fillReportSummary() {
     document.getElementById('res-tipo-evento').textContent = eventoSelect.options[eventoSelect.selectedIndex].text;
 }
 
-// Gemini API Call
+// Gemini API Call via Backend (avoid CORS)
 async function callGemini(prompt, expectJson = false) {
-    const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
-    const payload = { contents: [{ parts: [{ text: prompt }] }] };
-    if (expectJson) {
-        payload.generationConfig = { responseMimeType: "application/json" };
-    } else {
-        payload.tools = [{ "google_search": {} }];
-    }
+    try {
+        const response = await fetch(`${API_URL}/gemini/gemini-search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, expectJson })
+        });
 
-    const response = await fetch(apiURL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+        }
 
-    if (!response.ok) throw new Error(`Erro API: ${response.status}`);
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error("Resposta vazia.");
-    if (expectJson) {
-        const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        return JSON.parse(cleanJson);
+        const data = await response.json();
+        return expectJson ? data.result : data.result;
+    } catch (error) {
+        console.error("Erro callGemini:", error);
+        throw new Error(`Falha na busca IA: ${error.message}`);
     }
-    return text;
 }
 
 async function triggerDeepResearch(inicioContagem, dataFinal, nomeTribunal, comarcaCidade) {
