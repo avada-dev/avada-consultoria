@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 // Conectar ao banco de dados
 const dataDir = path.join(__dirname, '../data');
@@ -7,6 +8,9 @@ const DB_PATH = path.join(dataDir, 'database.sqlite');
 const db = new sqlite3.Database(DB_PATH);
 
 console.log('🔄 Iniciando importação dos dados da Dra. Caroline Fortes...\n');
+
+const TARGET_EMAIL = 'carolinafortesadvocacia@gmail.com';
+const TARGET_PASS = 'advogado2024';
 
 // Dados extraídos das planilhas
 const clientsData = [
@@ -86,13 +90,40 @@ const processesData = [
     { client: 'Joaquin Valetu', caseNumber: 'JV-JOAQ-2020-F', caseType: 'Administrativo', phase: 'Recurso ao CETRAN', status: 'Arquivado', partnership: 'AVADA', deadline: '2020-12-14' }
 ];
 
+async function ensureUser() {
+    return new Promise((resolve, reject) => {
+        const hash = bcrypt.hashSync(TARGET_PASS, 10);
+
+        db.get('SELECT * FROM users WHERE email = ?', [TARGET_EMAIL], (err, row) => {
+            if (err) return reject(err);
+
+            if (row) {
+                console.log(`✅ Usuário encontrado (ID: ${row.id}). Atualizando senha...`);
+                db.run('UPDATE users SET password = ? WHERE id = ?', [hash, row.id], function (err) {
+                    if (err) return reject(err);
+                    resolve(row.id);
+                });
+            } else {
+                console.log(`🆕 Criando usuário ${TARGET_EMAIL}...`);
+                db.run('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+                    ['Dra. Caroline Fortes', TARGET_EMAIL, hash, 'lawyer'],
+                    function (err) {
+                        if (err) return reject(err);
+                        resolve(this.lastID);
+                    }
+                );
+            }
+        });
+    });
+}
+
 // Função para inserir clientes
-function insertClients() {
+function insertClients(userId) {
     return new Promise((resolve, reject) => {
         db.serialize(() => {
             const stmt = db.prepare(`
-                INSERT INTO clients (name, phone, cpf, email, notes) 
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO clients (name, phone, cpf, email, notes, user_id, partnership_type) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `);
 
             let count = 0;
@@ -103,6 +134,8 @@ function insertClients() {
                     client.cpf,
                     client.email,
                     'Cliente importado da planilha da Dra. Caroline Fortes - Parceria AVADA',
+                    userId,
+                    'AVADA',
                     (err) => {
                         if (err) {
                             console.error(`❌ Erro ao inserir ${client.name}:`, err.message);
@@ -142,28 +175,33 @@ function insertProcesses() {
                     const clientId = row.id;
 
                     // Inserir processo
+                    // Note: case_number matches the schema now
+                    // type matches schema (caseType from import mapped to 'type')
                     db.run(`
                         INSERT INTO processes (
                             client_id, 
-                            process_number, 
-                            case_type, 
+                            case_number, 
+                            type, 
                             status, 
+                            phase,
                             partnership_type,
                             documents,
+                            process_category,
+                            deadline,
                             created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `, [
                         clientId,
                         process.caseNumber,
-                        process.caseType,
+                        process.caseType, // Mapped to type column
                         process.status,
-                        process.partnership,
+                        process.phase,
+                        'AVADA', // Force AVADA partnership
                         JSON.stringify({
-                            phase: process.phase,
-                            deadline: process.deadline,
-                            imported_from: 'Planilha Dra. Caroline Fortes',
-                            partnership: 'AVADA'
+                            imported_from: 'Planilha Dra. Caroline Fortes'
                         }),
+                        process.caseType, // Map caseType to category/type
+                        process.deadline,
                         new Date().toISOString()
                     ], (err) => {
                         if (err) {
@@ -188,16 +226,20 @@ function insertProcesses() {
 // Executar importação
 async function runImport() {
     try {
-        console.log('📥 FASE 1: Cadastrando Clientes...\n');
-        await insertClients();
+        console.log('🔐 Configurando usuário...');
+        const userId = await ensureUser();
+        console.log(`👤 Usuário alvo ID: ${userId}`);
 
-        console.log('📥 FASE 2: Cadastrando Processos...\n');
+        console.log('📥 FASE 1: Cadastrando Clientes...');
+        await insertClients(userId);
+
+        console.log('📥 FASE 2: Cadastrando Processos...');
         await insertProcesses();
 
         console.log('🎉 IMPORTAÇÃO CONCLUÍDA COM SUCESSO!');
         console.log('✅ Todos os dados da Dra. Caroline Fortes foram cadastrados.');
-        console.log('✅ Todos marcados como parceria AVADA.');
-        console.log('\n💡 Próximo passo: Dra. Caroline pode acessar o CRM e completar os dados faltantes.\n');
+        console.log('✅ Senha definida para: advogado2024');
+        console.log('\n💡 Tudo pronto para uso.\n');
 
         db.close();
     } catch (error) {
