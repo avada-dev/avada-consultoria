@@ -136,9 +136,7 @@ router.delete('/:id', authenticate, (req, res) => {
     });
 });
 
-// Archive/Un
-
-archive client
+// Archive/Unarchive client
 router.patch('/:id/archive', authenticate, (req, res) => {
     const { id } = req.params;
     const { archived } = req.body; // 1 = archived, 0 = active
