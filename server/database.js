@@ -161,13 +161,35 @@ const initDatabase = () => {
     ];
 
     db.serialize(() => {
-      const stmt = db.prepare("INSERT INTO users (email, password, name, role, phone, oab) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(email) DO UPDATE SET password=excluded.password, name=excluded.name, role=excluded.role, phone=excluded.phone, oab=excluded.oab");
       users.forEach(user => {
         const hash = bcrypt.hashSync(user.password, 10);
-        stmt.run(user.email, hash, user.name, user.role, user.phone, user.oab);
+
+        db.get("SELECT id FROM users WHERE email = ?", [user.email], (err, row) => {
+          if (err) {
+            console.error('Error checking user:', err);
+            return;
+          }
+
+          if (row) {
+            // User exists, FORCE update password
+            db.run("UPDATE users SET password = ?, name = ?, role = ?, phone = ?, oab = ? WHERE id = ?",
+              [hash, user.name, user.role, user.phone, user.oab, row.id],
+              (err) => {
+                if (!err) console.log(`✅ Credenciais atualizadas para: ${user.email}`);
+              }
+            );
+          } else {
+            // User missing, INSERT
+            db.run("INSERT INTO users (email, password, name, role, phone, oab) VALUES (?, ?, ?, ?, ?, ?)",
+              [user.email, hash, user.name, user.role, user.phone, user.oab],
+              (err) => {
+                if (!err) console.log(`✅ Usuário criado: ${user.email}`);
+              }
+            );
+          }
+        });
       });
-      stmt.finalize();
-      console.log('✅ Default users verified/updated with correct credentials.');
+      console.log('🔄 Verificação de usuários concluída.');
     });
 
     // Seed some sample clients and processes -> REMOVED per user request
