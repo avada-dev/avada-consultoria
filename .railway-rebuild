@@ -1,0 +1,6 @@
+# FORCE REBUILD - Cache Buster
+
+Timestamp: 2026-01-15T20:37:00-03:00
+Commit: Force Railway to ignore cache and rebuild completely
+
+This file exists solely to force Railway to do a fresh build without using cached layers.
