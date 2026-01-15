@@ -180,6 +180,9 @@ function switchView(view) {
     case 'users':
       loadUsers();
       break;
+    case 'archived':
+      loadProcesses(true);
+      break;
   }
 }
 
@@ -406,12 +409,14 @@ async function deleteClient(id) {
 // PROCESSES VIEW
 // ==========================================
 
-async function loadProcesses() {
-  document.getElementById('page-title').textContent = 'Processos';
+const currentSection = localStorage.getItem('currentSection') || 'processes';
+
+async function loadProcesses(archived = false) {
+  document.getElementById('page-title').textContent = archived ? 'Processos Arquivados' : 'Processos Ativos';
 
   try {
     const [processes, clients] = await Promise.all([
-      fetchAPI('/processes'),
+      fetchAPI(`/processes?archived=${archived}`),
       fetchAPI('/clients')
     ]);
 
@@ -423,10 +428,11 @@ async function loadProcesses() {
     const html = `
       <div class="table-container">
         <div class="table-header">
-          <h3 class="table-title">Lista de Processos</h3>
+          <h3 class="table-title">${archived ? 'Lista de Arquivados' : 'Lista de Processos'}</h3>
+          ${!archived ? `
           <button class="btn btn-primary" onclick="openProcessModal()">
             <i class="fas fa-plus"></i> Novo Processo
-          </button>
+          </button>` : ''}
         </div>
         <table class="data-table">
           <thead>
@@ -434,6 +440,7 @@ async function loadProcesses() {
               <th>Nº do Caso</th>
               <th>Cliente</th>
               <th>Tipo</th>
+              <th>Fase</th>
               <th>Advogado Responsável</th>
               <th>Status</th>
               <th>Prazo</th>
@@ -445,17 +452,25 @@ async function loadProcesses() {
               <tr>
                 <td onclick="viewProcess(${p.id})" style="cursor: pointer;"><strong>${p.case_number}</strong></td>
                 <td>${p.client_name || 'N/A'}</td>
-                <td>${p.type}</td>
+                <td>${p.type}<br><small class="text-gray-500">${p.process_category || ''}</small></td>
+                <td>${p.phase || '-'}</td>
                 <td>${p.lawyer_name || '-'}</td>
                 <td><span class="badge ${getStatusBadge(p.status)}">${p.status}</span></td>
                 <td>${p.deadline ? formatDate(p.deadline) : '-'}</td>
                 <td class="table-actions">
-                  <button class="btn btn-sm btn-secondary" onclick='editProcess(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                  <button class="btn btn-sm btn-secondary" onclick='editProcess(${JSON.stringify(p).replace(/'/g, "&apos;")})' title="Editar">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button class="btn btn-sm btn-danger" onclick="deleteProcess(${p.id})">
-                    <i class="fas fa-trash"></i>
+                  ${!archived ? `
+                  <button class="btn btn-sm btn-warning" onclick="archiveProcess(${p.id})" title="Arquivar">
+                    <i class="fas fa-archive"></i>
+                  </button>` : `
+                  <button class="btn btn-sm btn-success" onclick="unarchiveProcess(${p.id})" title="Desarquivar">
+                    <i class="fas fa-box-open"></i>
                   </button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteProcess(${p.id})" title="Excluir Permanentemente">
+                    <i class="fas fa-trash"></i>
+                  </button>`}
                 </td>
               </tr>
             `).join('')}
@@ -485,6 +500,31 @@ function openProcessModal(process = null) {
     document.getElementById('process-description').value = process.description || '';
     document.getElementById('process-deadline').value = process.deadline || '';
     document.getElementById('process-partnership').value = process.partnership_type || 'AVADA';
+    document.getElementById('process-category').value = process.process_category || '';
+
+    // Set Agency and handle "Other"
+    const agencySelect = document.getElementById('process-agency');
+    const agencyOther = document.getElementById('process-agency-other');
+    if (process.traffic_agency && !Array.from(agencySelect.options).some(o => o.value === process.traffic_agency)) {
+      agencySelect.value = 'Outro';
+      agencyOther.style.display = 'block';
+      agencyOther.value = process.traffic_agency;
+    } else {
+      agencySelect.value = process.traffic_agency || '';
+      agencyOther.style.display = 'none';
+    }
+
+    // Set Court and handle "Other"
+    const courtSelect = document.getElementById('process-court');
+    const courtOther = document.getElementById('process-court-other');
+    if (process.court && !Array.from(courtSelect.options).some(o => o.value === process.court)) {
+      courtSelect.value = 'Outro';
+      courtOther.style.display = 'block';
+      courtOther.value = process.court;
+    } else {
+      courtSelect.value = process.court || '';
+      courtOther.style.display = 'none';
+    }
   } else {
     title.textContent = 'Novo Processo';
     document.getElementById('process-form').reset();
@@ -513,7 +553,10 @@ async function saveProcess() {
     status: document.getElementById('process-status').value,
     description: document.getElementById('process-description').value,
     deadline: document.getElementById('process-deadline').value,
-    partnership_type: document.getElementById('process-partnership').value
+    partnership_type: document.getElementById('process-partnership').value,
+    process_category: document.getElementById('process-category').value,
+    traffic_agency: document.getElementById('process-agency').value === 'Outro' ? document.getElementById('process-agency-other').value : document.getElementById('process-agency').value,
+    court: document.getElementById('process-court').value === 'Outro' ? document.getElementById('process-court-other').value : document.getElementById('process-court').value
   };
 
   try {
@@ -524,20 +567,57 @@ async function saveProcess() {
     }
 
     closeProcessModal();
-    loadProcesses();
+    // Refresh current view (archived or active)
+    const isArchived = document.getElementById('page-title').textContent.includes('Arquivados');
+    loadProcesses(isArchived);
   } catch (error) {
     alert('Erro ao salvar processo');
   }
 }
 
+async function archiveProcess(id) {
+  if (!confirm('Deseja arquivar este processo?')) return;
+  try {
+    // Just update status to 'Arquivado'
+    await fetchAPI(`/processes/${id}`, 'PUT', { status: 'Arquivado' });
+    loadProcesses(false); // Reload active
+  } catch (error) {
+    alert('Erro ao arquivar processo');
+  }
+}
+
+async function unarchiveProcess(id) {
+  if (!confirm('Deseja desarquivar este processo?')) return;
+  try {
+    // Update status to 'Em Andamento' for unarchiving
+    await fetchAPI(`/processes/${id}`, 'PUT', { status: 'Em Andamento' });
+    loadProcesses(true); // Reload archived
+  } catch (error) {
+    alert('Erro ao desarquivar processo');
+  }
+}
+
 async function deleteProcess(id) {
-  if (!confirm('Tem certeza que deseja excluir este processo?')) return;
+  if (!confirm('ATENÇÃO: Esta ação é PERMANENTE e não pode ser desfeita. Deseja realmente excluir?')) return;
 
   try {
     await fetchAPI(`/processes/${id}`, 'DELETE');
-    loadProcesses();
+    loadProcesses(true); // Reload archived (since delete is only available there)
   } catch (error) {
     alert('Erro ao excluir processo');
+  }
+}
+
+function toggleOtherField(type) {
+  const select = document.getElementById(`process-${type}`);
+  const otherInput = document.getElementById(`process-${type}-other`);
+  if (select.value === 'Outro') {
+    otherInput.style.display = 'block';
+    otherInput.required = true;
+  } else {
+    otherInput.style.display = 'none';
+    otherInput.required = false;
+    otherInput.value = '';
   }
 }
 
