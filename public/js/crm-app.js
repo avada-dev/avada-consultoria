@@ -791,6 +791,168 @@ function isDateNear(dateString) {
 }
 
 // ==========================================
+// VIEW FULL PROCESS - Pasta Completa do Processo
+// ==========================================
+
+async function viewFullProcess(id) {
+  try {
+    const data = await fetchAPI(`/processes/${id}/full`);
+    const process = data.process;
+    const client = data.client;
+    const lawyer = data.lawyer;
+    const attachments = data.attachments;
+    const stats = data.stats;
+
+    // Build the HTML for the Full Process View
+    const html = `
+      <div class="mb-20">
+        <button class="btn btn-secondary" onclick="switchView('processes')">
+          <i class="fas fa-arrow-left"></i> Voltar para Lista de Processos
+        </button>
+      </div>
+
+      <div class="info-card mb-20" style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div class="flex-between">
+            <h2 style="font-size: 1.8rem; color: #2d3748; margin-bottom: 20px;">
+                <i class="fas fa-gavel" style="color: #667eea;"></i> Pasta Completa: ${process.case_number}
+            </h2>
+             <button class="btn btn-primary" onclick='editProcess(${JSON.stringify(process).replace(/'/g, "&apos;")})'>
+                <i class="fas fa-edit"></i> Editar Processo
+             </button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 10px;">
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Cliente</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">
+                    <i class="fas fa-user" style="color: #667eea;"></i> 
+                    <a href="#" onclick="viewClientFull(${process.client_id}); return false;" style="color: #667eea; text-decoration: underline;">${process.client_name}</a>
+                </p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Tipo/Categoria</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${process.type || '-'}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Fase Processual</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${process.phase || '-'}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Status</p>
+                <p><span class="badge ${getStatusBadge(process.status)}" style="font-size: 1rem;">${process.status}</span></p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Estado/Cidade</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${process.state || '-'} / ${process.city || '-'}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Tribunal</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${process.court || '-'}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Órgão de Trânsito</p>
+                <p style="font-weight: 600; font-size: 1.1rem;">${process.traffic_agency || '-'}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Prazo</p>
+                <p style="font-weight: 600; font-size: 1.1rem; color: ${isDateNear(process.deadline) ? '#e53e3e' : '#2d3748'};">
+                    ${process.deadline ? `<i class="fas fa-calendar-alt"></i> ${formatDate(process.deadline)}` : '-'}
+                </p>
+            </div>
+        </div>
+
+        ${process.description ? `
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+             <p class="text-sm text-gray-600" style="color: #718096; font-size: 0.9rem;">Descrição</p>
+             <p style="color: #4a5568;">${process.description}</p>
+        </div>` : ''}
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon blue"><i class="fas fa-paperclip"></i></div>
+          <div class="stat-value">${stats.totalAttachments}</div>
+          <div class="stat-label">Anexos</div>
+        </div>
+        <div class="stat-card ${process.status === 'Em Andamento' ? 'orange' : process.status === 'Concluído' ? 'green' : 'purple'}">
+          <div class="stat-icon ${process.status === 'Em Andamento' ? 'orange' : process.status === 'Concluído' ? 'green' : 'purple'}"><i class="fas fa-tag"></i></div>
+          <div class="stat-value">${process.status}</div>
+          <div class="stat-label">Status Atual</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon green"><i class="fas fa-user-tie"></i></div>
+          <div class="stat-value">${lawyer ? lawyer.name : 'N/A'}</div>
+          <div class="stat-label">Advogado Responsável</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-header">
+          <h3 class="table-title">Anexos do Processo</h3>
+           <button class="btn btn-primary" onclick="openAttachmentsModal(${process.id})">
+            <i class="fas fa-paperclip"></i> Gerenciar Anexos
+          </button>
+        </div>
+        ${attachments.length > 0 ? `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nome do Arquivo</th>
+              <th>Tipo</th>
+              <th>Tamanho</th>
+              <th>Enviado por</th>
+              <th>Data</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${attachments.map(a => `
+              <tr>
+                <td>
+                    <i class="fas fa-file"></i> ${a.original_name}
+                </td>
+                <td>${a.file_type}</td>
+                <td>${(a.file_size / 1024).toFixed(2)} KB</td>
+                <td>${a.uploaded_by_name || '-'}</td>
+                <td>${formatDate(a.created_at)}</td>
+                <td class="table-actions">
+                  <a href="${API_URL}/processes/attachments/${a.id}/download" class="btn btn-sm btn-success" title="Download" download>
+                    <i class="fas fa-download"></i>
+                  </a>
+                  <button class="btn btn-sm btn-danger" onclick="deleteAttachment(${a.id}, ${process.id})" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ` : `
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-file-upload"></i></div>
+            <div class="empty-state-title">Nenhum anexo encontrado</div>
+            <p>Este processo ainda não possui arquivos anexados.</p>
+        </div>
+        `}
+      </div>
+    `;
+
+    document.getElementById('content-area').innerHTML = html;
+    document.getElementById('page-title').textContent = 'Detalhes do Processo';
+
+    // Scroll to top
+    window.scrollTo(0, 0);
+
+  } catch (error) {
+    console.error(error);
+    alert('Erro ao carregar pasta do processo: ' + error.message);
+  }
+}
+
+// ==========================================
 // CHANGE PASSWORD
 // ==========================================
 

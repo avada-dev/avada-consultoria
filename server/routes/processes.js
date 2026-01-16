@@ -183,6 +183,77 @@ router.patch('/:id/unarchive', authenticate, (req, res) => {
     );
 });
 
+// Get full process data (similar to /clients/:id/full)
+router.get('/:id/full', authenticate, async (req, res) => {
+    const processId = req.params.id;
+
+    try {
+        // Get process with client info
+        const process = await new Promise((resolve, reject) => {
+            const query = `
+                SELECT p.*, c.name as client_name, c.email as client_email, c.phone as client_phone,
+                       c.cpf as client_cpf, c.address as client_address
+                FROM processes p
+                JOIN clients c ON p.client_id = c.id
+                WHERE p.id = ?
+            `;
+            db.get(query, [processId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        if (!process) {
+            return res.status(404).json({ error: 'Processo não encontrado' });
+        }
+
+        // Get client full data
+        const client = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM clients WHERE id = ?', [process.client_id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        // Get lawyer
+        const lawyer = await new Promise((resolve, reject) => {
+            db.get('SELECT id, name, email, oab FROM users WHERE id = ?', [client?.user_id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        // Get attachments
+        const attachments = await new Promise((resolve, reject) => {
+            const query = `
+                SELECT a.*, u.name as uploaded_by_name
+                FROM attachments a
+                LEFT JOIN users u ON a.uploaded_by = u.id
+                WHERE a.process_id = ?
+                ORDER BY a.created_at DESC
+            `;
+            db.all(query, [processId], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            });
+        });
+
+        res.json({
+            process,
+            client,
+            lawyer,
+            attachments,
+            stats: {
+                totalAttachments: attachments.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching full process:', error);
+        res.status(500).json({ error: 'Erro ao buscar processo completo' });
+    }
+});
+
 
 // ==========================================
 // ATTACHMENTS - Upload de Arquivos
