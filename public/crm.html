@@ -563,12 +563,12 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <div>
                                 <label class="form-label" style="font-size: 0.85rem;">Tipo de Data</label>
-                                <select id="deadline-type" class="form-input">
-                                    <option value="publicacao">Data da Publicação (DJe)</option>
+                                <select id="deadline-type" class="form-input" onchange="toggleDeadlineCalculator()">
+                                    <option value="public acao">Data da Publicação (DJe)</option>
                                     <option value="notificacao">Data da Notificação</option>
                                 </select>
                             </div>
-                            <div>
+                            <div id="dias-uteis-container">
                                 <label class="form-label" style="font-size: 0.85rem;">Dias Úteis</label>
                                 <select id="deadline-days" class="form-input" onchange="calculateProcessDeadline()">
                                     <option value="5">5 Dias</option>
@@ -577,11 +577,19 @@
                                     <option value="30">30 Dias</option>
                                 </select>
                             </div>
+                            <div id="tipo-notificacao-container" style="display: none;">
+                                <label class="form-label" style="font-size: 0.85rem;">Tipo de Notificação</label>
+                                <select id="notification-type" class="form-input">
+                                    <option value="autuacao">Notificação de Autuação</option>
+                                    <option value="penalidade">Notificação de Penalidade</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
-                                <label class="form-label" style="font-size: 0.85rem;">Data Inicial</label>
+                                <label class="form-label" style="font-size: 0.85rem;" id="data-inicial-label">Data
+                                    Inicial</label>
                                 <input type="date" id="deadline-start-date" class="form-input"
                                     onchange="calculateProcessDeadline()">
                             </div>

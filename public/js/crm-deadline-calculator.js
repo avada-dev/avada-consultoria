@@ -60,23 +60,63 @@ function loadCitiesByState() {
 // Tornar funções globais para serem chamadas pelo HTML via onchange/onclick
 window.loadCitiesByState = loadCitiesByState;
 window.calculateProcessDeadline = calculateProcessDeadline;
+window.toggleDeadlineCalculator = toggleDeadlineCalculator;
+
+// Toggle between publication and notification modes
+function toggleDeadlineCalculator() {
+    const deadlineType = document.getElementById('deadline-type').value;
+    const diasUteisContainer = document.getElementById('dias-uteis-container');
+    const tipoNotificacaoContainer = document.getElementById('tipo-notificacao-container');
+    const dataInicialLabel = document.getElementById('data-inicial-label');
+
+    if (deadlineType === 'notificacao') {
+        // Modo Notificação: esconde dias úteis, mostra tipo notificação
+        diasUteisContainer.style.display = 'none';
+        tipoNotificacaoContainer.style.display = 'block';
+        dataInicialLabel.textContent = 'Prazo Limite (da Notificação)';
+    } else {
+        // Modo Publicação: mostra dias úteis, esconde tipo notificação
+        diasUteisContainer.style.display = 'block';
+        tipoNotificacaoContainer.style.display = 'none';
+        dataInicialLabel.textContent = 'Data Inicial';
+    }
+
+    // Recalcular após mudar modo
+    calculateProcessDeadline();
+}
 
 // Calculadora de Prazos com IA integrada
 async function calculateProcessDeadline() {
+    const deadlineType = document.getElementById('deadline-type')?.value;
     const startDate = document.getElementById('deadline-start-date').value;
-    const days = parseInt(document.getElementById('deadline-days').value);
-    const state = document.getElementById('process-state').value;
-    const city = document.getElementById('process-city').value;
-    const tribunal = document.getElementById('process-court').value;
+    const days = parseInt(document.getElementById('deadline-days')?.value || 0);
+    const state = document.getElementById('process-state')?.value;
+    const city = document.getElementById('process-city')?.value;
+    const tribunal = document.getElementById('process-court')?.value;
 
     if (!startDate) {
         document.getElementById('process-deadline').value = '';
-        document.getElementById('deadline-info').textContent = 'Selecione a data inicial para calcular.';
+        const infoEl = document.getElementById('deadline-info');
+        if (infoEl) infoEl.textContent = 'Selecione a data inicial para calcular.';
         return;
     }
 
+    // MODO NOTIFICAÇÃO: Prazo fatal = Data Limit (sem cálculo)
+    if (deadlineType === 'notificacao') {
+        document.getElementById('process-deadline').value = startDate;
+        const infoEl = document.getElementById('deadline-info');
+        if (infoEl) {
+            const notifType = document.getElementById('notification-type')?.value;
+            const notifLabel = notifType === 'autuacao' ? 'Notificação de Autuação' : 'Notificação de Penalidade';
+            infoEl.innerHTML = `<span style="color: #38a169;">✓ ${notifLabel}: Prazo limite definido diretamente (sem cálculo de dias úteis)</span>`;
+        }
+        return;
+    }
+
+    // MODO PUBLICAÇÃO: Continua com cálculo normal
     if (!state || !city) {
-        document.getElementById('deadline-info').innerHTML = '<span style="color: #e53e3e;">⚠️ Selecione Estado e Cidade para buscar feriados via IA.</span>';
+        const infoEl = document.getElementById('deadline-info');
+        if (infoEl) infoEl.innerHTML = '<span style="color: #e53e3e;">⚠️ Selecione Estado e Cidade para buscar feriados via IA.</span>';
         calculateSimpleDeadline(startDate, days);
         return;
     }
