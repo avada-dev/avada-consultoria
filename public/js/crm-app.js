@@ -206,67 +206,116 @@ async function loadDashboard() {
       completedProcesses: processes.filter(p => p.status === 'Concluído').length
     };
 
+    // Categorizar processos por status para Kanban
+    const kanbanColumns = {
+      'Em Andamento': processes.filter(p => p.status === 'Em Andamento'),
+      'Pendente': processes.filter(p => p.status === 'Pendente'),
+      'Aguardando': processes.filter(p => p.status === 'Aguardando'),
+      'Concluído': processes.filter(p => p.status === 'Concluído')
+    };
+
     const html = `
-      <div class="stats-grid">
-        <div class="stat-card" onclick="switchView('clients')" style="cursor: pointer;" title="Clique para ver todos os clientes">
-          <div class="stat-icon blue">
+      <!-- Stats Cards -->
+      <div class="stats-grid" style="margin-bottom: 30px;">
+        <div class="stat-card" onclick="switchView('clients')" style="cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+          <div class="stat-icon" style="background: rgba(255,255,255,0.2);">
             <i class="fas fa-users"></i>
           </div>
-          <div class="stat-value">${stats.totalClients}</div>
-          <div class="stat-label">Total de Clientes</div>
+          <div class="stat-value" style="color: white;">${stats.totalClients}</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total de Clientes</div>
         </div>
         
-        <div class="stat-card" onclick="switchView('processes')" style="cursor: pointer;" title="Clique para ver todos os processos">
-          <div class="stat-icon green">
+        <div class="stat-card" onclick="switchView('processes')" style="cursor: pointer; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+          <div class="stat-icon" style="background: rgba(255,255,255,0.2);">
             <i class="fas fa-folder-open"></i>
           </div>
-          <div class="stat-value">${stats.totalProcesses}</div>
-          <div class="stat-label">Total de Processos</div>
+          <div class="stat-value" style="color: white;">${stats.totalProcesses}</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total de Processos</div>
         </div>
         
-        <div class="stat-card" onclick="switchView('processes')" style="cursor: pointer;" title="Clique para ver processos ativos">
-          <div class="stat-icon orange">
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+          <div class="stat-icon" style="background: rgba(255,255,255,0.2);">
             <i class="fas fa-clock"></i>
           </div>
-          <div class="stat-value">${stats.activeProcesses}</div>
-          <div class="stat-label">Em Andamento</div>
+          <div class="stat-value" style="color: white;">${stats.activeProcesses}</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Em Andamento</div>
         </div>
         
-        <div class="stat-card" onclick="switchView('archived')" style="cursor: pointer;" title="Clique para ver processos arquivados">
-          <div class="stat-icon purple">
+        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+          <div class="stat-icon" style="background: rgba(255,255,255,0.2);">
             <i class="fas fa-check-circle"></i>
           </div>
-          <div class="stat-value">${stats.completedProcesses}</div>
-          <div class="stat-label">Concluídos</div>
+          <div class="stat-value" style="color: white;">${stats.completedProcesses}</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Concluídos</div>
         </div>
       </div>
 
-      <div class="table-container mt-20">
-        <div class="table-header">
-          <h3 class="table-title">Processos Recentes</h3>
+      <!-- Kanban Board -->
+      <div style="margin-top: 30px;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #2d3748; margin-bottom: 20px;">
+          <i class="fas fa-columns"></i> Processos por Status
+        </h2>
+        <div class="kanban-board">
+          ${Object.keys(kanbanColumns).map(status => {
+      const statusColors = {
+        'Em Andamento': { bg: '#fff5f5', border: '#fc8181', badge: '#e53e3e' },
+        'Pendente': { bg: '#fffaf0', border: '#f6ad55', badge: '#dd6b20' },
+        'Aguardando': { bg: '#f0f9ff', border: '#63b3ed', badge: '#3182ce' },
+        'Concluído': { bg: '#f0fff4', border: '#68d391', badge: '#38a169' }
+      };
+      const colors = statusColors[status];
+      const processesInColumn = kanbanColumns[status];
+
+      return `
+              <div class="kanban-column" style="background: ${colors.bg}; border-top: 4px solid ${colors.border};">
+                <div class="kanban-column-header" style="background: ${colors.border}; color: white; padding: 15px; border-radius: 8px 8px 0 0; margin: -1px -1px 15px -1px;">
+                  <h3 style="font-size: 1.1rem; font-weight: 600; margin: 0;">
+                    ${status}
+                    <span style="background: rgba(255,255,255,0.3); padding: 3px 10px; border-radius: 12px; font-size: 0.9rem; margin-left: 8px;">
+                      ${processesInColumn.length}
+                    </span>
+                  </h3>
+                </div>
+                <div class="kanban-cards">
+                  ${processesInColumn.length > 0 ? processesInColumn.map(p => `
+                    <div class="kanban-card" onclick="viewFullProcess(${p.id})">
+                      <div class="kanban-card-header">
+                        <strong style="color: #2d3748; font-size: 1rem;">${p.case_number}</strong>
+                        <span class="badge" style="background: ${colors.badge}; color: white; font-size: 0.75rem; padding: 3px 8px;">${status}</span>
+                      </div>
+                      <div class="kanban-card-body">
+                        <p style="color: #4a5568; font-size: 0.9rem; margin: 8px 0;">
+                          <i class="fas fa-user" style="color: #667eea;"></i> ${p.client_name || 'N/A'}
+                        </p>
+                        <p style="color: #718096; font-size: 0.85rem; margin: 5px 0;">
+                          <i class="fas fa-briefcase"></i> ${p.type}
+                        </p>
+                        ${p.phase ? `<p style="color: #a0aec0; font-size: 0.8rem; margin: 5px 0;">
+                          <i class="fas fa-layer-group"></i> ${p.phase}
+                        </p>` : ''}
+                      </div>
+                      <div class="kanban-card-footer">
+                        ${p.deadline ? `
+                          <span style="color: ${isDateNear(p.deadline) ? '#e53e3e' : '#718096'}; font-size: 0.8rem;">
+                            <i class="fas fa-calendar"></i> ${formatDate(p.deadline)}
+                          </span>
+                        ` : '<span style="color: #a0aec0; font-size: 0.8rem;">Sem prazo</span>'}
+                        <span style="color: #a0aec0; font-size: 0.75rem;">
+                          <i class="fas fa-user-tie"></i> ${p.lawyer_name || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  `).join('') : `
+                    <div class="kanban-empty">
+                      <i class="fas fa-inbox" style="font-size: 2rem; color: #cbd5e0; margin-bottom: 10px;"></i>
+                      <p style="color: #a0aec0; font-size: 0.9rem;">Nenhum processo</p>
+                    </div>
+                  `}
+                </div>
+              </div>
+            `;
+    }).join('')}
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Nº do Caso</th>
-              <th>Cliente</th>
-              <th>Tipo</th>
-              <th>Status</th>
-              <th>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${processes.slice(0, 5).map(p => `
-              <tr>
-                <td><strong>${p.case_number}</strong></td>
-                <td>${p.client_name || 'N/A'}</td>
-                <td>${p.type}</td>
-                <td><span class="badge ${getStatusBadge(p.status)}">${p.status}</span></td>
-                <td>${formatDate(p.created_at)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
       </div>
     `;
 
