@@ -14,8 +14,11 @@
 }
 
 .kanban-column {
-    min-width: 300px;
     flex: 1;
+    min-width: 240px;
+    /* Reduzido de 300px para caber 4 colunas */
+    max-width: calc(25% - 15px);
+    /* Garante 4 colunas iguais com gap */
     background: white;
     border-radius: 12px;
     padding: 1px;
