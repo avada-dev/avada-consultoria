@@ -8,6 +8,9 @@
     overflow-x: auto;
     padding: 10px 0;
     margin-bottom: 30px;
+    max-width: 100%;
+    /* Prevenir ultrapassar 100% */
+    width: 100%;
 }
 
 .kanban-column {
