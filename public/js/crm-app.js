@@ -408,10 +408,12 @@ function openClientModal(client = null) {
     document.getElementById('client-cpf').value = client.cpf || '';
     document.getElementById('client-address').value = client.address || '';
     document.getElementById('client-notes').value = client.notes || '';
+    document.getElementById('client-partnership').value = client.partnership_type || 'PARTICULAR';
   } else {
     title.textContent = 'Novo Cliente';
     document.getElementById('client-form').reset();
     document.getElementById('client-id').value = '';
+    document.getElementById('client-partnership').value = 'PARTICULAR';
   }
 
   modal.classList.add('show');
@@ -559,8 +561,6 @@ function openProcessModal(process = null) {
     if (document.getElementById('process-id')) document.getElementById('process-id').value = process.id;
     if (document.getElementById('process-client')) document.getElementById('process-client').value = process.client_id;
     if (document.getElementById('process-case-number')) document.getElementById('process-case-number').value = process.case_number;
-    // process-type is replaced by process-category
-    if (document.getElementById('process-process-category')) document.getElementById('process-category').value = process.process_category || process.type || '';
     if (document.getElementById('process-category')) document.getElementById('process-category').value = process.process_category || process.type || '';
 
     if (document.getElementById('process-phase')) document.getElementById('process-phase').value = process.phase || '';
@@ -568,7 +568,21 @@ function openProcessModal(process = null) {
     if (document.getElementById('process-description')) document.getElementById('process-description').value = process.description || '';
     document.getElementById('process-deadline').value = process.deadline || '';
     document.getElementById('process-partnership').value = process.partnership_type || 'AVADA';
-    document.getElementById('process-category').value = process.process_category || '';
+
+    // Set State and City
+    if (document.getElementById('process-state')) {
+      document.getElementById('process-state').value = process.state || '';
+      // Trigger city population if state exists
+      if (process.state && typeof window.loadCitiesByState === 'function') {
+        window.loadCitiesByState();
+        // Set city after cities are loaded
+        setTimeout(() => {
+          if (document.getElementById('process-city')) {
+            document.getElementById('process-city').value = process.city || '';
+          }
+        }, 100);
+      }
+    }
 
     // Set Agency and handle "Other"
     const agencySelect = document.getElementById('process-agency');
@@ -616,13 +630,15 @@ async function saveProcess() {
   const data = {
     client_id: parseInt(document.getElementById('process-client').value),
     case_number: document.getElementById('process-case-number').value,
-    type: document.getElementById('process-category').value, // Use category as type
+    type: document.getElementById('process-category').value,
     phase: document.getElementById('process-phase').value,
     status: document.getElementById('process-status').value,
     description: document.getElementById('process-description').value,
     deadline: document.getElementById('process-deadline').value,
     partnership_type: document.getElementById('process-partnership').value,
     process_category: document.getElementById('process-category').value,
+    state: document.getElementById('process-state').value,
+    city: document.getElementById('process-city').value,
     traffic_agency: document.getElementById('process-agency').value === 'Outro' ? document.getElementById('process-agency-other').value : document.getElementById('process-agency').value,
     court: document.getElementById('process-court').value === 'Outro' ? document.getElementById('process-court-other').value : document.getElementById('process-court').value
   };

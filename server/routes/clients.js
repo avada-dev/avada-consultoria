@@ -5,21 +5,25 @@ const { authenticate } = require('../middleware/authMiddleware');
 
 // Get all clients (filtered by user for lawyers, by partnership for admin)
 router.get('/', authenticate, (req, res) => {
-    let query = 'SELECT * FROM clients WHERE 1=1';
+    let query = `
+    SELECT c.*, u.name as lawyer_name
+    FROM clients c
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE 1=1`;
     let params = [];
 
     // Admin AVADA sees only AVADA partnership clients
     if (req.user.role === 'admin') {
-        query += ' AND partnership_type = ?';
+        query += ' AND c.partnership_type = ?';
         params.push('AVADA');
     }
     // Lawyers can only see their own clients
     else if (req.user.role === 'lawyer') {
-        query += ' AND user_id = ?';
+        query += ' AND c.user_id = ?';
         params.push(req.user.id);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY c.created_at DESC';
 
     db.all(query, params, (err, clients) => {
         if (err) {
