@@ -1351,19 +1351,31 @@ function closeChangePasswordModal() {
   document.getElementById('change-password-form').reset();
 }
 
-async function submitPasswordChange() {
-  const currentPassword = document.getElementById('current-password')?.value?.trim();
-  const newPassword = document.getElementById('new-password')?.value?.trim();
-  const confirmPassword = document.getElementById('confirm-password')?.value?.trim();
+async function submitPasswordChange(event) {
+  // Se chamado via evento, prevenir default
+  if (event) {
+    event.preventDefault();
+  }
 
-  console.log('[DEBUG] Password Change:', {
-    currentPassword: currentPassword ? '***' : 'EMPTY',
-    newPassword: newPassword ? '***' : 'EMPTY',
-    confirmPassword: confirmPassword ? '***' : 'EMPTY'
+  // Pegar form diretamente
+  const form = document.getElementById('change-password-form');
+
+  // Usar FormData para pegar valores do form
+  const formData = new FormData(form);
+  const currentPassword = formData.get('current-password')?.trim();
+  const newPassword = formData.get('new-password')?.trim();
+  const confirmPassword = formData.get('confirm-password')?.trim();
+
+  console.log('[DEBUG] Password Change - FormData:', {
+    currentPassword: currentPassword ? '***FILLED***' : 'EMPTY',
+    newPassword: newPassword ? '***FILLED***' : 'EMPTY',
+    confirmPassword: confirmPassword ? '***FILLED***' : 'EMPTY',
+    formExists: !!form
   });
 
   if (!currentPassword || !newPassword || !confirmPassword) {
     alert('Preencha todos os campos!');
+    console.error('[ERROR] Empty fields detected');
     return;
   }
 

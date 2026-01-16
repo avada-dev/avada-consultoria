@@ -795,20 +795,22 @@
                 <button class="modal-close" onclick="closeChangePasswordModal()">×</button>
             </div>
             <div class="modal-body">
-                <form id="change-password-form"
-                    onsubmit="event.preventDefault(); submitPasswordChange(); return false;">
+                <form id="change-password-form" onsubmit="submitPasswordChange(event); return false;">
                     <div class="form-group">
                         <label class="form-label">Senha Atual *</label>
-                        <input type="password" id="current-password" class="form-input" required>
+                        <input type="password" id="current-password" name="current-password" class="form-input"
+                            required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Nova Senha *</label>
-                        <input type="password" id="new-password" class="form-input" required minlength="6">
+                        <input type="password" id="new-password" name="new-password" class="form-input" required
+                            minlength="6">
                         <small style="color: #718096;">Mínimo de 6 caracteres</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Confirmar Nova Senha *</label>
-                        <input type="password" id="confirm-password" class="form-input" required>
+                        <input type="password" id="confirm-password" name="confirm-password" class="form-input"
+                            required>
                     </div>
                 </form>
             </div>
