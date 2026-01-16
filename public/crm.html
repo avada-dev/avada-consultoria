@@ -795,7 +795,8 @@
                 <button class="modal-close" onclick="closeChangePasswordModal()">×</button>
             </div>
             <div class="modal-body">
-                <form id="change-password-form">
+                <form id="change-password-form"
+                    onsubmit="event.preventDefault(); submitPasswordChange(); return false;">
                     <div class="form-group">
                         <label class="form-label">Senha Atual *</label>
                         <input type="password" id="current-password" class="form-input" required>
@@ -812,8 +813,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeChangePasswordModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="submitPasswordChange()">Alterar Senha</button>
+                <button class="btn btn-secondary" type="button" onclick="closeChangePasswordModal()">Cancelar</button>
+                <button class="btn btn-primary" type="button" onclick="submitPasswordChange()">Alterar Senha</button>
             </div>
         </div>
     </div>

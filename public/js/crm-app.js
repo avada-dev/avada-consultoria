@@ -1352,9 +1352,15 @@ function closeChangePasswordModal() {
 }
 
 async function submitPasswordChange() {
-  const currentPassword = document.getElementById('current-password').value;
-  const newPassword = document.getElementById('new-password').value;
-  const confirmPassword = document.getElementById('confirm-password').value;
+  const currentPassword = document.getElementById('current-password')?.value?.trim();
+  const newPassword = document.getElementById('new-password')?.value?.trim();
+  const confirmPassword = document.getElementById('confirm-password')?.value?.trim();
+
+  console.log('[DEBUG] Password Change:', {
+    currentPassword: currentPassword ? '***' : 'EMPTY',
+    newPassword: newPassword ? '***' : 'EMPTY',
+    confirmPassword: confirmPassword ? '***' : 'EMPTY'
+  });
 
   if (!currentPassword || !newPassword || !confirmPassword) {
     alert('Preencha todos os campos!');
