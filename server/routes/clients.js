@@ -51,20 +51,22 @@ router.get('/:id', authenticate, (req, res) => {
 
 // Create new client
 router.post('/', authenticate, (req, res) => {
-    const { name, email, phone, cpf, address, notes } = req.body;
+    const { name, email, phone, cpf, address, notes, partnership_type } = req.body;
 
     if (!name || !phone) {
         return res.status(400).json({ error: 'Nome e telefone são obrigatórios' });
     }
 
     const user_id = req.user.role === 'lawyer' ? req.user.id : req.body.user_id || null;
+    const partnershipType = partnership_type || 'AVADA'; // Default AVADA
 
     db.run(
-        'INSERT INTO clients (name, email, phone, cpf, address, user_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [name, email, phone, cpf, address, user_id, notes],
+        'INSERT INTO clients (name, email, phone, cpf, address, user_id, notes, partnership_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [name, email, phone, cpf, address, user_id, notes, partnershipType],
         function (err) {
             if (err) {
-                return res.status(500).json({ error: 'Erro ao criar cliente' });
+                console.error('Erro ao criar cliente:', err);
+                return res.status(500).json({ error: 'Erro ao criar cliente: ' + err.message });
             }
 
             res.status(201).json({
@@ -75,7 +77,8 @@ router.post('/', authenticate, (req, res) => {
                 cpf,
                 address,
                 user_id,
-                notes
+                notes,
+                partnership_type: partnershipType
             });
         }
     );
