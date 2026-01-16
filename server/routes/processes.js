@@ -9,6 +9,7 @@ const fs = require('fs');
 // Get all processes (filtered by partnership for admin, by user for lawyers)
 router.get('/', authenticate, (req, res) => {
     const includeArchived = req.query.archived === 'true';
+    console.log('[DEBUG] GET /processes query:', req.query, 'includeArchived:', includeArchived);
 
     let query = `
     SELECT p.*, c.name as client_name, c.phone as client_phone, c.partnership_type, u.name as lawyer_name

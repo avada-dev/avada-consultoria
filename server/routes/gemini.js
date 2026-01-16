@@ -25,21 +25,22 @@ router.post('/gemini-search', async (req, res) => {
             payload.tools = [{ "google_search": {} }];
         }
 
-        const response = await fetch(apiURL, {
-            method: 'POST',
+        // Usando axios que já está no projeto
+        const axios = require('axios');
+        const response = await axios.post(apiURL, payload, {
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            validateStatus: status => status < 500 // Resolve promessa para 4xx
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
+        if (response.status !== 200) {
+            console.error('Erro Gemini API:', response.data);
             return res.status(response.status).json({
                 error: 'Erro na API Gemini',
-                details: errorData
+                details: response.data
             });
         }
 
-        const data = await response.json();
+        const data = response.data;
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!text) {
@@ -48,7 +49,12 @@ router.post('/gemini-search', async (req, res) => {
 
         if (expectJson) {
             const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-            return res.json({ result: JSON.parse(cleanJson) });
+            try {
+                return res.json({ result: JSON.parse(cleanJson) });
+            } catch (e) {
+                console.error("Erro parsing JSON:", e);
+                return res.json({ result: {} }); // Retorna vazio se falhar parse
+            }
         }
 
         res.json({ result: text });

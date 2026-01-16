@@ -1,7 +1,8 @@
 // API Configuration
-const API_URL = window.location.hostname === 'localhost'
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000/api'
-    : '/api';
+    : 'https://avada-consultoria.up.railway.app/api'; // Garantindo URL absoluta para evitar erro em file:// ou domínios diferentes
+
 
 // --- LÓGICA DE DATAS ---
 function getEaster(year) {
@@ -197,7 +198,7 @@ document.getElementById('calcularBtn').addEventListener('click', async () => {
         geminiText = await callGemini(promptFeriados, false);
     } catch (error) {
         console.error("Erro IA Feriados:", error);
-        geminiText = `<div class="text-xs text-red-600 mt-2"><strong>Busca IA falhou (CORS/Rede).</strong> Verifique conexão.</div>`;
+        geminiText = `<div class="text-xs text-red-600 mt-2"><strong>Erro:</strong> ${error.message} <br>Verifique conexão ou tente novamente.</div>`;
     }
 
     document.getElementById('gemini-initial-report').innerHTML = `${geminiText.startsWith('<div') ? geminiText : `<h3 class="text-sm font-semibold text-gray-700 mt-4 border-b pb-2">Relatório da Pesquisa Inicial (IA):</h3><div class="text-xs text-gray-600 whitespace-pre-wrap mt-2">${geminiText}</div>`}`;
