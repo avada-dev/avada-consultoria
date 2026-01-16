@@ -621,6 +621,35 @@ function closeProcessModal() {
   document.getElementById('process-modal').classList.remove('show');
 }
 
+// Global function to load cities
+window.loadCitiesByState = async function () {
+  const stateSelect = document.getElementById('process-state');
+  const citySelect = document.getElementById('process-city');
+  const state = stateSelect.value;
+
+  if (!state) {
+    citySelect.innerHTML = '<option value="">Selecione um Estado primeiro</option>';
+    return;
+  }
+
+  citySelect.innerHTML = '<option value="">Carregando...</option>';
+
+  try {
+    const response = await fetch('data/municipios.json');
+    if (!response.ok) throw new Error('Erro ao carregar municípios');
+
+    const data = await response.json();
+    const cities = data[state] || [];
+
+    citySelect.innerHTML = '<option value="">Selecione...</option>' +
+      cities.map(city => `<option value="${city}">${city}</option>`).join('');
+
+  } catch (error) {
+    console.error('Erro ao carregar cidades:', error);
+    citySelect.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+};
+
 function editProcess(process) {
   openProcessModal(process);
 }
