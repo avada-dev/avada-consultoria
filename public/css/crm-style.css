@@ -647,6 +647,18 @@ body {
    RESPONSIVE
    ========================================== */
 
+/* Tablets e telas médias */
+@media (max-width: 1024px) {
+    .content-area {
+        padding: 25px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
@@ -661,6 +673,10 @@ body {
         margin-left: 0;
     }
 
+    .content-area {
+        padding: 20px;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
@@ -671,6 +687,53 @@ body {
 
     .data-table {
         min-width: 600px;
+    }
+}
+
+/* Telas grandes de PC - Otimização para 100% */
+@media (min-width: 1200px) {
+    .content-area {
+        padding: 30px 40px;
+        /* Mais padding horizontal para telas grandes */
+        max-width: none;
+        /* Remove limitação de largura */
+        width: 100%;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+        /* 4 colunas fixas em telas grandes */
+        gap: 24px;
+    }
+
+    .table-container {
+        width: 100%;
+        max-width: none;
+    }
+
+    .kanban-board {
+        gap: 24px;
+    }
+
+    .kanban-column {
+        min-width: calc(25% - 18px);
+        /* 4 colunas iguais */
+    }
+}
+
+/* Telas ultra-wide (> 1600px) */
+@media (min-width: 1600px) {
+    .content-area {
+        padding: 40px 60px;
+        /* Mais espaço em monitores ultra-wide */
+    }
+
+    .stats-grid {
+        gap: 30px;
+    }
+
+    .kanban-board {
+        gap: 30px;
     }
 }
 
