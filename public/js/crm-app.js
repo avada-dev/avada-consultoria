@@ -526,6 +526,9 @@ async function loadProcesses(archived = false) {
                   ${!archived ? `
                   <button class="btn btn-sm btn-warning" onclick="archiveProcess(${p.id})" title="Arquivar">
                     <i class="fas fa-archive"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteProcess(${p.id})" title="Excluir Permanentemente">
+                    <i class="fas fa-trash"></i>
                   </button>` : `
                   <button class="btn btn-sm btn-success" onclick="unarchiveProcess(${p.id})" title="Desarquivar">
                     <i class="fas fa-box-open"></i>

@@ -86,7 +86,7 @@ router.post('/', authenticate, (req, res) => {
 
 // Update client
 router.put('/:id', authenticate, (req, res) => {
-    const { name, email, phone, cpf, address, notes } = req.body;
+    const { name, email, phone, cpf, address, notes, partnership_type } = req.body;
 
     // Check if client exists and user has permission
     db.get('SELECT * FROM clients WHERE id = ?', [req.params.id], (err, client) => {
@@ -103,8 +103,8 @@ router.put('/:id', authenticate, (req, res) => {
         }
 
         db.run(
-            'UPDATE clients SET name = ?, email = ?, phone = ?, cpf = ?, address = ?, notes = ? WHERE id = ?',
-            [name, email, phone, cpf, address, notes, req.params.id],
+            'UPDATE clients SET name = ?, email = ?, phone = ?, cpf = ?, address = ?, notes = ?, partnership_type = ? WHERE id = ?',
+            [name, email, phone, cpf, address, notes, partnership_type || 'PARTICULAR', req.params.id],
             (err) => {
                 if (err) {
                     return res.status(500).json({ error: 'Erro ao atualizar cliente' });
