@@ -552,72 +552,22 @@
                         <textarea id="process-description" class="form-input" rows="3"></textarea>
                     </div>
 
-                    <!-- CALCULADORA DE PRAZOS INTEGRADA -->
-                    <div class="form-group"
-                        style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <label class="form-label"
-                            style="color: #2d3748; font-weight: 600; margin-bottom: 10px; display: block;">
-                            <i class="fas fa-calculator"></i> Calculadora de Prazos
-                        </label>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                            <div>
-                                <label class="form-label" style="font-size: 0.85rem;">Tipo de Data</label>
-                                <select id="deadline-type" class="form-input" onchange="toggleDeadlineCalculator()">
-                                    <option value="public acao">Data da Publicação (DJe)</option>
-                                    <option value="notificacao">Data da Notificação</option>
-                                </select>
-                            </div>
-                            <div id="dias-uteis-container">
-                                <label class="form-label" style="font-size: 0.85rem;">Dias Úteis</label>
-                                <select id="deadline-days" class="form-input" onchange="calculateProcessDeadline()">
-                                    <option value="5">5 Dias</option>
-                                    <option value="10">10 Dias</option>
-                                    <option value="15">15 Dias</option>
-                                    <option value="30">30 Dias</option>
-                                </select>
-                            </div>
-                            <div id="tipo-notificacao-container" style="display: none;">
-                                <label class="form-label" style="font-size: 0.85rem;">Tipo de Notificação</label>
-                                <select id="notification-type" class="form-input">
-                                    <option value="autuacao">Notificação de Autuação</option>
-                                    <option value="penalidade">Notificação de Penalidade</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div>
-                                <label class="form-label" style="font-size: 0.85rem;" id="data-inicial-label">Data
-                                    Inicial</label>
-                                <input type="date" id="deadline-start-date" class="form-input"
-                                    onchange="calculateProcessDeadline()">
-                            </div>
-                            <div>
-                                <label class="form-label" style="font-size: 0.85rem;">Prazo Fatal</label>
-                                <input type="date" id="process-deadline" class="form-input" readonly
-                                    style="background-color: #e2e8f0; font-weight: bold; color: #2d3748;">
-                            </div>
-                        </div>
-
-                        <div id="deadline-info"
-                            style="font-size: 0.8rem; color: #718096; margin-top: 8px; font-style: italic;">
-                            A IA buscará automaticamente feriados municipais, estaduais e nacionais.
-                        </div>
-
-                        <div id="deadline-ai-status" style="margin-top: 8px; display: none;">
-                            <div class="text-xs text-blue-600">
-                                <i class="fas fa-spinner fa-spin"></i> Buscando feriados e suspensões via IA...
-                            </div>
-                        </div>
+                    <!-- PRAZO SIMPLES -->
+                    <div class="form-group">
+                        <label class="form-label">Prazo Limite</label>
+                        <input type="date" id="process-deadline" class="form-input">
+                        <small class="text-gray-500">Data limite para interpor recurso ou realizar ação</small>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeProcessModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveProcess()">Salvar</button>
             </div>
         </div>
+    </div>
+    </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeProcessModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveProcess()">Salvar</button>
+    </div>
+    </div>
     </div>
 
     <!-- User Modal (Admin Only) -->
