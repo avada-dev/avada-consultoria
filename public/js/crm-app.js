@@ -450,7 +450,7 @@ async function loadProcesses(archived = false) {
           <tbody>
             ${processes.map(p => `
               <tr>
-                <td onclick="viewProcess(${p.id})" style="cursor: pointer;"><strong>${p.case_number}</strong></td>
+                <td onclick="viewFullProcess(${p.id})" style="cursor: pointer; color: #667eea; font-weight: 600;"><strong>${p.case_number}</strong></td>
                 <td>${p.client_name || 'N/A'}</td>
                 <td>${p.type}<br><small class="text-gray-500">${p.process_category || ''}</small></td>
                 <td>${p.phase || '-'}</td>
