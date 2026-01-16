@@ -157,6 +157,15 @@ function showDashboard() {
 // ==========================================
 
 function switchView(view) {
+  console.log('[DEBUG] switchView called with:', view);
+
+  // Prevent if already loading
+  if (window.isLoadingView) {
+    console.log('[DEBUG] Already loading view, ignoring...');
+    return;
+  }
+  window.isLoadingView = true;
+
   // Update active menu item
   document.querySelectorAll('.menu-item').forEach(item => {
     item.classList.remove('active');
@@ -172,7 +181,7 @@ function switchView(view) {
       loadClients();
       break;
     case 'processes':
-      loadProcesses();
+      loadProcesses(false); // EXPLICITAMENTE FALSE
       break;
     case 'system-info':
       loadSystemInfo();
@@ -181,9 +190,12 @@ function switchView(view) {
       loadUsers();
       break;
     case 'archived':
-      loadProcesses(true);
+      console.log('[DEBUG] Calling loadProcesses(true) for ARCHIVED');
+      loadProcesses(true); // EXPLICITAMENTE TRUE
       break;
   }
+
+  window.isLoadingView = false;
 }
 
 // ==========================================
@@ -461,6 +473,7 @@ async function deleteClient(id) {
 const currentSection = localStorage.getItem('currentSection') || 'processes';
 
 async function loadProcesses(archived = false) {
+  console.log('[DEBUG] loadProcesses called with archived:', archived);
   document.getElementById('page-title').textContent = archived ? 'Processos Arquivados' : 'Processos Ativos';
 
   try {
