@@ -37,10 +37,6 @@ const citiesByState = {
     'TO': ['Palmas', 'Araguaína', 'Gurupi', 'Porto Nacional', 'Paraíso do Tocantins']
 };
 
-// Tornar função global para ser chamada pelo HTML via onchange
-window.loadCitiesByState = loadCitiesByState;
-window.calculateProcessDeadline = calculateProcessDeadline;
-
 // Load cities when state changes
 function loadCitiesByState() {
     const stateSelect = document.getElementById('process-state');
@@ -60,6 +56,10 @@ function loadCitiesByState() {
         citySelect.innerHTML = '<option value="">Digite manualmente a cidade</option>';
     }
 }
+
+// Tornar funções globais para serem chamadas pelo HTML via onchange/onclick
+window.loadCitiesByState = loadCitiesByState;
+window.calculateProcessDeadline = calculateProcessDeadline;
 
 // Calculadora de Prazos com IA integrada
 async function calculateProcessDeadline() {
