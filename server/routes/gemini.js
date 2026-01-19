@@ -52,7 +52,8 @@ router.post('/gemini-search', async (req, res) => {
             console.error('[GEMINI] Erro da API - Data:', JSON.stringify(response.data));
             return res.status(response.status).json({
                 error: 'Erro na API Gemini',
-                details: response.data
+                details: response.data,
+                debug_key_prefix: GEMINI_API_KEY ? GEMINI_API_KEY.substring(0, 8) + '...' : 'undefined'
             });
         }
 

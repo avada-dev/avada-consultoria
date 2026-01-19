@@ -58,8 +58,11 @@ router.post('/', authenticate, (req, res) => {
     const { name, email, phone, cpf, address, notes, partnership_type } = req.body;
 
     if (!name || !phone) {
+        console.warn('[CLIENTS] Tentativa de criar cliente sem nome ou telefone', req.body);
         return res.status(400).json({ error: 'Nome e telefone são obrigatórios' });
     }
+
+    console.log('[CLIENTS] Criando cliente:', { name, email, phone, partnership_type });
 
     const user_id = req.user.role === 'lawyer' ? req.user.id : req.body.user_id || null;
     const partnershipType = partnership_type || 'AVADA'; // Default AVADA

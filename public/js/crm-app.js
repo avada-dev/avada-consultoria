@@ -441,6 +441,7 @@ async function saveClient() {
   };
 
   try {
+    console.log('[FRONTEND] Saving client...', data);
     if (id) {
       await fetchAPI(`/clients/${id}`, 'PUT', data);
       alert('Cliente atualizado com sucesso!');
@@ -449,8 +450,16 @@ async function saveClient() {
       alert('Cliente cadastrado com sucesso!');
     }
 
+    // Force update UI
+    console.log('[FRONTEND] Client saved. Refreshing list...');
     closeClientModal();
-    loadClients();
+    if (typeof loadClients === 'function') {
+      await loadClients();
+    } else {
+      console.error('[FRONTEND] CRITICAL: loadClients is not a function');
+      window.location.reload(); // Fallback
+    }
+
   } catch (error) {
     alert('Erro ao salvar cliente: ' + (error.message || 'Erro desconhecido'));
     console.error('Erro completo:', error);
