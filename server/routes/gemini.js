@@ -19,10 +19,9 @@ router.post('/gemini-search', async (req, res) => {
             return res.status(400).json({ error: 'Prompt é obrigatório' });
         }
 
-        // MODELO ESTÁVEL: gemini-1.5-flash (Garantia de funcionamento)
-        // O modelo 2.5 pode estar instável ou restrito no momento.
-        const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        console.log('[GEMINI] Modelo: gemini-1.5-flash (Fallback de Segurança)');
+        // MODELO EXIGIDO: gemini-2.5-flash
+        const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        console.log('[GEMINI] Modelo: gemini-2.5-flash (Exigido pelo Usuário)');
 
         const payload = {
             contents: [{ parts: [{ text: prompt }] }]
