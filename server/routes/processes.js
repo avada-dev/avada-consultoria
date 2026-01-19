@@ -37,10 +37,21 @@ router.get('/', authenticate, (req, res) => {
         console.log('[DEBUG] Filter mode: SHOW ONLY archived');
     }
 
-    // Admin AVADA sees only processes from AVADA clients
+    // Admin Logic (Strict Business Rule):
+    // 1. See ALL processes from Partnerships (Carolina, Joadno, etc.) -> partnership_type != 'Particular'
+    //    (Actually, based on user input, "AVADA" is seemingly treated as a partnership type for admin view too).
+    // 2. See OWN 'Particular' processes.
+    // 3. DO NOT see 'Particular' processes of others.
+
+    // Wait, partnership_type is storing "Parceria X" or "Particular".
+    // So if partnership_type != 'Particular', implies it's a partnership.
+
     if (req.user.role === 'admin') {
-        query += ' AND c.partnership_type = ?';
-        params.push('AVADA');
+        // Query: Show if partnership IS NOT Particular OR if I own it.
+        // Effectively hides other people's Private cases.
+        query += ' AND (c.partnership_type != ? OR c.user_id = ?)';
+        params.push('Particular', req.user.id);
+        console.log('[DEBUG] Admin Filter: Hiding external Particular cases');
     }
     // Lawyers can only see processes of their clients
     else if (req.user.role === 'lawyer') {
