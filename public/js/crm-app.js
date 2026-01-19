@@ -395,9 +395,51 @@ async function loadClients() {
   }
 }
 
+
+// Helper to populate Partnership Options based on User Role
+function populatePartnershipOptions(selectId) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Selecione...</option>';
+
+  if (currentUser.role === 'admin') {
+    // Admin Options
+    const options = [
+      'Parceria Carolina',
+      'Parceria Joadno',
+      'Parceria Floriano',
+      'Parceria Ricardo',
+      'AVADA',
+      'PARTICULAR'
+    ];
+    options.forEach(opt => {
+      const el = document.createElement('option');
+      el.value = opt;
+      el.textContent = opt;
+      select.appendChild(el);
+    });
+  } else {
+    // Lawyer Options (Restricted)
+    const el1 = document.createElement('option');
+    el1.value = 'PARTICULAR';
+    el1.textContent = 'Particular';
+    select.appendChild(el1);
+
+    const el2 = document.createElement('option');
+    el2.value = 'AVADA';
+    el2.textContent = 'Parceria AVADA';
+    select.appendChild(el2);
+  }
+}
+
 function openClientModal(client = null) {
   const modal = document.getElementById('client-modal');
   const title = document.getElementById('client-modal-title');
+
+  // Populate dynamic options
+  populatePartnershipOptions('client-partnership');
+
 
   if (client) {
     title.textContent = 'Editar Cliente';
@@ -408,12 +450,19 @@ function openClientModal(client = null) {
     document.getElementById('client-cpf').value = client.cpf || '';
     document.getElementById('client-address').value = client.address || '';
     document.getElementById('client-notes').value = client.notes || '';
-    document.getElementById('client-partnership').value = client.partnership_type || 'PARTICULAR';
+
+    // Set value after populating
+    setTimeout(() => {
+      document.getElementById('client-partnership').value = client.partnership_type || 'PARTICULAR';
+    }, 50);
+
   } else {
     title.textContent = 'Novo Cliente';
     document.getElementById('client-form').reset();
     document.getElementById('client-id').value = '';
-    document.getElementById('client-partnership').value = 'PARTICULAR';
+
+    // Reset select again just in case
+    populatePartnershipOptions('client-partnership');
   }
 
   modal.classList.add('show');
