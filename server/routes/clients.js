@@ -12,12 +12,14 @@ router.get('/', authenticate, (req, res) => {
     WHERE 1=1`;
     let params = [];
 
-    // Admin AVADA sees only AVADA partnership clients
+    // Admin AVADA logic:
+    // 1. Sees ALL clients dealing with 'AVADA' partnership, regardless of who created them.
+    // 2. Sees 'PARTICULAR' clients ONLY if created by the Admin himself (user_id = req.user.id).
     if (req.user.role === 'admin') {
-        query += ' AND c.partnership_type = ?';
-        params.push('AVADA');
+        query += ' AND (c.partnership_type = ? OR c.user_id = ?)';
+        params.push('AVADA', req.user.id);
     }
-    // Lawyers can only see their own clients
+    // Lawyers can only see their own clients (Strict)
     else if (req.user.role === 'lawyer') {
         query += ' AND c.user_id = ?';
         params.push(req.user.id);
