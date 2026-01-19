@@ -475,14 +475,23 @@ async function deleteClient(id) {
 const currentSection = localStorage.getItem('currentSection') || 'processes';
 
 async function loadProcesses(archived = false) {
-  console.log('[DEBUG] loadProcesses called with archived:', archived);
+  console.log('[FRONTEND DEBUG] ===== loadProcesses called =====');
+  console.log('[FRONTEND DEBUG] archived parameter:', archived);
+  console.log('[FRONTEND DEBUG] typeof archived:', typeof archived);
+
+  const processesUrl = `/processes?archived=${archived}`;
+  console.log('[FRONTEND DEBUG] Constructed URL:', processesUrl);
+  console.log('[FRONTEND DEBUG] Full URL will be:', `${API_URL}${processesUrl}`);
+
   document.getElementById('page-title').textContent = archived ? 'Processos Arquivados' : 'Processos Ativos';
 
   try {
+    console.log('[FRONTEND DEBUG] About to fetch processes...');
     const [processes, clients] = await Promise.all([
-      fetchAPI(`/processes?archived=${archived}`),
+      fetchAPI(processesUrl),
       fetchAPI('/clients')
     ]);
+    console.log('[FRONTEND DEBUG] Received', processes.length, 'processes from backend');
 
     // Populate client select for modal
     const clientSelect = document.getElementById('process-client');
@@ -548,6 +557,7 @@ async function loadProcesses(archived = false) {
 
     document.getElementById('content-area').innerHTML = html;
   } catch (error) {
+    console.error('[FRONTEND DEBUG] Error loading processes:', error);
     showError('Erro ao carregar processos');
   }
 }
