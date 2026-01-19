@@ -184,7 +184,11 @@ const CalculadoraApp = (() => {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 console.error('[CALC] Erro API:', errorData);
-                throw new Error(errorData.error || 'Erro ao comunicar com a IA');
+
+                const err = new Error(errorData.error || 'Erro ao comunicar com a IA');
+                err.details = errorData.details;
+                err.debug_key_prefix = errorData.debug_key_prefix;
+                throw err;
             }
 
             const data = await response.json();
@@ -200,9 +204,25 @@ const CalculadoraApp = (() => {
 
         } catch (error) {
             console.error('[CALC] Erro Catch:', error);
-            const msg = error.name === 'AbortError'
-                ? 'Tempo limite excedido. Tente novamente.'
-                : (error.message || 'Erro desconhecido.');
+
+            let msg = error.message || 'Erro desconhecido.';
+
+            // Tratamento específico para erro da API Gemini (vindo do backend)
+            if (msg === 'Erro na API Gemini' && error.details) {
+                if (error.debug_key_prefix === 'undefined') {
+                    msg = 'ERRO CRÍTICO: A Chave de API (GEMINI_API_KEY) não está configurada no Railway. Verifique as Variáveis de Ambiente.';
+                } else {
+                    msg = `Erro na API Gemini: ${JSON.stringify(error.details.error?.message || error.details)}`;
+                }
+            } else if (msg.includes('Configuration')) {
+                msg = 'Erro de Configuração da IA. Verifique se a chave de API é válida.';
+            }
+
+            // Se for timeout
+            if (error.name === 'AbortError') {
+                msg = 'O tempo limite da requisição foi excedido. Tente novamente.';
+            }
+
             UI.showError(msg);
         } finally {
             UI.setLoading(false);
