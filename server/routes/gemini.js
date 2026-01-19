@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-// Gemini API Key
-const GEMINI_API_KEY = "AIzaSyCDcLLQol77KpeOqpa3U0lmfwc1uHUHdAY";
+// Gemini API Key - Usando variável de ambiente para segurança
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // Proxy endpoint for Gemini API to avoid CORS issues
 router.post('/gemini-search', async (req, res) => {
