@@ -1,7 +1,7 @@
 // API Configuration
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000/api'
-    : 'https://avada-consultoria.up.railway.app/api'; // Garantindo URL absoluta para evitar erro em file:// ou domínios diferentes
+    : 'https://avada-consultoria-production.up.railway.app/api'; // URL correta do Railway
 
 
 // --- LÓGICA DE DATAS ---
