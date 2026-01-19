@@ -451,14 +451,11 @@ async function saveClient() {
     }
 
     // Force update UI
-    console.log('[FRONTEND] Client saved. Refreshing list...');
-    closeClientModal();
-    if (typeof loadClients === 'function') {
-      await loadClients();
-    } else {
-      console.error('[FRONTEND] CRITICAL: loadClients is not a function');
-      window.location.reload(); // Fallback
-    }
+    // Force update UI - Hard Reload to ensure list is fresh
+    console.log('[FRONTEND] Client saved. Reloading page to show new client...');
+    alert('Operação realizada com sucesso! A página será recarregada.');
+    window.location.reload();
+    return;
 
   } catch (error) {
     alert('Erro ao salvar cliente: ' + (error.message || 'Erro desconhecido'));
