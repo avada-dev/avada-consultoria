@@ -245,23 +245,55 @@ function fillReportSummary() {
 
 // Gemini API Call via Backend (avoid CORS)
 async function callGemini(prompt, expectJson = false) {
+    const url = `${API_URL}/gemini/gemini-search`;
+    console.log('[FRONTEND] ===== Chamando IA =====');
+    console.log('[FRONTEND] URL:', url);
+    console.log('[FRONTEND] Prompt length:', prompt.length);
+    console.log('[FRONTEND] expectJson:', expectJson);
+
     try {
-        const response = await fetch(`${API_URL}/gemini/gemini-search`, {
+        console.log('[FRONTEND] Iniciando fetch...');
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, expectJson })
         });
 
+        console.log('[FRONTEND] Resposta recebida - Status:', response.status);
+
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+            let errorMsg;
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorData.message || `Erro HTTP: ${response.status}`;
+                console.error('[FRONTEND] Erro da API:', errorData);
+            } catch (e) {
+                errorMsg = `Erro HTTP ${response.status}: ${response.statusText}`;
+                console.error('[FRONTEND] Erro ao parsear resposta de erro');
+            }
+            throw new Error(errorMsg);
         }
 
         const data = await response.json();
+        console.log('[FRONTEND] Dados recebidos com sucesso');
         return expectJson ? data.result : data.result;
+
     } catch (error) {
-        console.error("Erro callGemini:", error);
-        throw new Error(`Falha na busca IA: ${error.message}`);
+        console.error('[FRONTEND ERROR] Tipo:', error.name);
+        console.error('[FRONTEND ERROR] Mensagem:', error.message);
+
+        // Mensagens de erro mais específicas
+        if (error.message === 'Failed to fetch') {
+            throw new Error('Servidor offline ou sem conexão de rede. Verifique se o backend está rodando em ' + API_URL);
+        } else if (error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION')) {
+            throw new Error('Erro de conexão. Verifique sua internet e se o servidor está acessível.');
+        } else if (error.message.includes('CORS')) {
+            throw new Error('Erro de CORS. Contate o administrador do sistema.');
+        } else if (error.message.includes('timeout')) {
+            throw new Error('Timeout: A IA demorou muito para responder. Tente novamente com um texto menor.');
+        } else {
+            throw new Error(`Falha na busca IA: ${error.message}`);
+        }
     }
 }
 
