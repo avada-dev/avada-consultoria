@@ -9,7 +9,12 @@ const fs = require('fs');
 // Get all processes (filtered by partnership for admin, by user for lawyers)
 router.get('/', authenticate, (req, res) => {
     const includeArchived = req.query.archived === 'true';
-    console.log('[DEBUG] GET /processes query:', req.query, 'includeArchived:', includeArchived);
+    console.log('[DEBUG] ===== GET /processes =====');
+    console.log('[DEBUG] Full query object:', JSON.stringify(req.query));
+    console.log('[DEBUG] req.query.archived raw value:', req.query.archived);
+    console.log('[DEBUG] typeof req.query.archived:', typeof req.query.archived);
+    console.log('[DEBUG] includeArchived result:', includeArchived);
+    console.log('[DEBUG] User role:', req.user.role);
 
     let query = `
     SELECT p.*, c.name as client_name, c.phone as client_phone, c.partnership_type, u.name as lawyer_name
@@ -24,10 +29,12 @@ router.get('/', authenticate, (req, res) => {
     if (!includeArchived) {
         query += ' AND p.status != ?';
         params.push('Arquivado');
+        console.log('[DEBUG] Filter mode: EXCLUDE archived (showing active)');
     } else {
         // Only show archived
         query += ' AND p.status = ?';
         params.push('Arquivado');
+        console.log('[DEBUG] Filter mode: SHOW ONLY archived');
     }
 
     // Admin AVADA sees only processes from AVADA clients
@@ -43,9 +50,18 @@ router.get('/', authenticate, (req, res) => {
 
     query += ' ORDER BY p.created_at DESC';
 
+    console.log('[DEBUG] Final SQL query:', query);
+    console.log('[DEBUG] SQL params:', params);
+
     db.all(query, params, (err, processes) => {
         if (err) {
+            console.error('[ERROR] Database error:', err);
             return res.status(500).json({ error: 'Erro ao buscar processos' });
+        }
+        console.log('[DEBUG] Query returned', processes.length, 'processes');
+        if (processes.length > 0) {
+            console.log('[DEBUG] First process status:', processes[0].status);
+            console.log('[DEBUG] Last process status:', processes[processes.length - 1].status);
         }
         res.json(processes);
     });
