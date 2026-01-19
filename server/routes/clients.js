@@ -55,6 +55,7 @@ router.get('/:id', authenticate, (req, res) => {
 
 // Create new client
 router.post('/', authenticate, (req, res) => {
+    console.log('[CLIENTS] POST /clients - Payload recebido:', req.body);
     const { name, email, phone, cpf, address, notes, partnership_type } = req.body;
 
     if (!name || !phone) {
@@ -62,19 +63,24 @@ router.post('/', authenticate, (req, res) => {
         return res.status(400).json({ error: 'Nome e telefone são obrigatórios' });
     }
 
-    console.log('[CLIENTS] Criando cliente:', { name, email, phone, partnership_type });
+    console.log('[CLIENTS] Dados validados. Inserindo no banco...');
 
     const user_id = req.user.role === 'lawyer' ? req.user.id : req.body.user_id || null;
-    const partnershipType = partnership_type || 'AVADA'; // Default AVADA
+    const partnershipType = partnership_type || 'AVADA';
+
+    console.log('[CLIENTS] User ID atribuído:', user_id);
+    console.log('[CLIENTS] Partnership Type:', partnershipType);
 
     db.run(
         'INSERT INTO clients (name, email, phone, cpf, address, user_id, notes, partnership_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [name, email, phone, cpf, address, user_id, notes, partnershipType],
         function (err) {
             if (err) {
-                console.error('Erro ao criar cliente:', err);
+                console.error('[CLIENTS] ERRO FATAL AO INSERIR NO BANCO:', err);
                 return res.status(500).json({ error: 'Erro ao criar cliente: ' + err.message });
             }
+
+            console.log('[CLIENTS] Cliente criado com Sucesso! ID:', this.lastID);
 
             res.status(201).json({
                 id: this.lastID,
