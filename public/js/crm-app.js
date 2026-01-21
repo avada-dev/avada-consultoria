@@ -284,26 +284,46 @@ async function loadDashboard() {
   document.getElementById('page-title').textContent = 'Dashboard';
 
   try {
-    const [clients, processes] = await Promise.all([
+    const [clients, activeProcesses, archivedProcesses] = await Promise.all([
       fetchAPI('/clients'),
-      fetchAPI('/processes')
+      fetchAPI('/processes'),
+      fetchAPI('/processes?archived=true')
     ]);
+
+    // Merge active and archived for Dashboard view
+    const processes = [...activeProcesses, ...archivedProcesses];
 
     const stats = {
       totalClients: clients.length,
       totalProcesses: processes.length,
-      // Active = Em Andamento + Ok Feito + Pendente + ANY status starting with 'Aguardando'
-      activeProcesses: processes.filter(p => ['Em Andamento', 'Ok Feito', 'Pendente'].includes(p.status) || p.status.startsWith('Aguardando')).length,
-      completedProcesses: processes.filter(p => p.status === 'Concluído').length
+      // Active = Em Andamento + Ok Feito + others not concluded/archived
+      // "Active" in the stats card definition might probably mean 'Em Andamento' bucket + 'Pendente' bucket?
+      // For now let's keep it as the sum of "Working on"
+      activeProcesses: processes.filter(p => ['Em Andamento', 'Ok Feito'].includes(p.status)).length,
+      completedProcesses: processes.filter(p => ['Concluído', 'Arquivado'].includes(p.status)).length
     };
 
     // Categorizar processos por status para Kanban
-    // "Ao colocar o STATUS Ok feito, o processo deverá aparecer como em ANDAMENTO" -> Mapped to 'Em Andamento' Column
     const kanbanColumns = {
-      'Em Andamento': processes.filter(p => p.status === 'Em Andamento' || p.status === 'Ok Feito'),
-      'Pendente': processes.filter(p => p.status === 'Pendente'),
+      // 1. Em Andamento + Ok Feito
+      'Em Andamento': processes.filter(p => ['Em Andamento', 'Ok Feito'].includes(p.status)),
+
+      // 2. Aguardando (...)
       'Aguardando': processes.filter(p => p.status.startsWith('Aguardando')),
-      'Concluído': processes.filter(p => p.status === 'Concluído')
+
+      // 3. Concluído + Arquivado
+      'Concluído': processes.filter(p => ['Concluído', 'Arquivado'].includes(p.status)),
+
+      // 4. PENDENTES (Catch-All: Tudo que não se encaixa nas anteriores)
+      // "Todos os processos... que não estejam com status de OK Feito ou em Andamento... devem aparecer como PENDENTES"
+      // (Excluindo Aguardando e Arquivado/Concluído que têm suas próprias colunas)
+      'Pendente': processes.filter(p => {
+        const isEmAndamento = ['Em Andamento', 'Ok Feito'].includes(p.status);
+        const isAguardando = p.status.startsWith('Aguardando');
+        const isConcluido = ['Concluído', 'Arquivado'].includes(p.status);
+
+        return !isEmAndamento && !isAguardando && !isConcluido;
+      })
     };
 
     const html = `
@@ -435,7 +455,10 @@ async function loadClients() {
             <i class="fas fa-plus"></i> Novo Cliente
           </button>
         </div>
-        <table class="data-table">
+        <div style="padding: 10px 20px;">
+            <input type="text" id="client-search" class="form-input" placeholder="🔍 Buscar por nome, email ou CPF..." onkeyup="filterTable('client-search', 'clients-table')">
+        </div>
+        <table class="data-table" id="clients-table">
           <thead>
             <tr>
               <th>Nome</th>
@@ -558,6 +581,11 @@ function editClient(client) {
 }
 
 async function saveClient() {
+  const btn = document.querySelector('#client-modal .modal-footer .btn-primary');
+  const originalText = btn.textContent;
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+
   const id = document.getElementById('client-id').value;
   const data = {
     name: document.getElementById('client-name').value,
@@ -573,33 +601,37 @@ async function saveClient() {
     console.log('[FRONTEND] Saving client...', data);
     if (id) {
       await fetchAPI(`/clients/${id}`, 'PUT', data);
-      alert('Cliente atualizado com sucesso!');
     } else {
       await fetchAPI('/clients', 'POST', data);
-      alert('Cliente cadastrado com sucesso!');
     }
 
-    // Force update UI
-    // Force update UI - Hard Reload to ensure list is fresh
-    console.log('[FRONTEND] Client saved. Reloading page to show new client...');
-    alert('Operação realizada com sucesso! A página será recarregada.');
-    window.location.reload();
-    return;
+    closeClientModal();
+    alert('Cliente salvo com sucesso!');
+    await loadClients();
 
   } catch (error) {
     alert('Erro ao salvar cliente: ' + (error.message || 'Erro desconhecido'));
     console.error('Erro completo:', error);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
   }
 }
 
 async function deleteClient(id) {
   if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
 
+  // Find the button that triggered this (optional, hard to get without event)
+  // But since this is usually called from a list, we might not have a specific button reference easily accessible 
+  // without changing the signature. For list actions, usually a global spinner or toast is better.
+  // We'll stick to the basic wait here.
+
   try {
     await fetchAPI(`/clients/${id}`, 'DELETE');
-    loadClients();
+    await loadClients();
+    alert('Cliente excluído com sucesso.');
   } catch (error) {
-    alert('Erro ao excluir cliente');
+    alert('Erro ao excluir cliente: ' + (error.message || 'Erro desconhecido'));
   }
 }
 
@@ -642,7 +674,10 @@ async function loadProcesses(archived = false) {
             <i class="fas fa-plus"></i> Novo Processo
           </button>` : ''}
         </div>
-        <table class="data-table">
+        <div style="padding: 10px 20px;">
+            <input type="text" id="process-search" class="form-input" placeholder="🔍 Buscar por caso, cliente, fase..." onkeyup="filterTable('process-search', 'processes-table')">
+        </div>
+        <table class="data-table" id="processes-table">
           <thead>
             <tr>
               <th>Nº do Caso</th>
@@ -802,6 +837,11 @@ function editProcess(process) {
 }
 
 async function saveProcess() {
+  const btn = document.querySelector('#process-modal .modal-footer .btn-primary');
+  const originalText = btn.textContent;
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+
   const id = document.getElementById('process-id').value;
   const data = {
     client_id: parseInt(document.getElementById('process-client').value),
@@ -827,11 +867,16 @@ async function saveProcess() {
     }
 
     closeProcessModal();
+    alert('Processo salvo com sucesso!');
+
     // Refresh current view (archived or active)
     const isArchived = document.getElementById('page-title').textContent.includes('Arquivados');
-    loadProcesses(isArchived);
+    await loadProcesses(isArchived);
   } catch (error) {
-    alert('Erro ao salvar processo');
+    alert('Erro ao salvar processo: ' + (error.message || 'Erro desconhecido'));
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
   }
 }
 
@@ -1394,6 +1439,33 @@ function showError(message) {
     </div>
   `;
 }
+
+// Global Filter Function
+window.filterTable = function (inputId, tableId) {
+  const input = document.getElementById(inputId);
+  const filter = input.value.toLowerCase();
+  const table = document.getElementById(tableId);
+  const trs = table.getElementsByTagName('tr');
+
+  // Loop through all table rows, and hide those who don't match the search query
+  for (let i = 1; i < trs.length; i++) { // Start from 1 to skip header
+    let found = false;
+    const tds = trs[i].getElementsByTagName('td');
+
+    for (let j = 0; j < tds.length; j++) {
+      const td = tds[j];
+      if (td) {
+        if (td.textContent.toLowerCase().indexOf(filter) > -1) {
+          found = true;
+          break;
+        }
+      }
+    }
+
+    trs[i].style.display = found ? '' : 'none';
+  }
+}
+
 
 console.log('🚀 AVADA CRM - Application initialized');
 
