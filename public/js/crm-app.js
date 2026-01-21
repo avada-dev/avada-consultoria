@@ -292,15 +292,17 @@ async function loadDashboard() {
     const stats = {
       totalClients: clients.length,
       totalProcesses: processes.length,
-      activeProcesses: processes.filter(p => p.status === 'Em Andamento').length,
+      // Active = Em Andamento + Ok Feito + others not concluded/archived
+      activeProcesses: processes.filter(p => ['Em Andamento', 'Ok Feito', 'Pendente', 'Aguardando Documentos', 'Aguardando Recurso de Apelação'].includes(p.status)).length,
       completedProcesses: processes.filter(p => p.status === 'Concluído').length
     };
 
     // Categorizar processos por status para Kanban
+    // "Ao colocar o STATUS Ok feito, o processo deverá aparecer como em ANDAMENTO" -> Mapped to 'Em Andamento' Column
     const kanbanColumns = {
-      'Em Andamento': processes.filter(p => p.status === 'Em Andamento'),
+      'Em Andamento': processes.filter(p => p.status === 'Em Andamento' || p.status === 'Ok Feito'),
       'Pendente': processes.filter(p => p.status === 'Pendente'),
-      'Aguardando': processes.filter(p => p.status === 'Aguardando'),
+      'Aguardando': processes.filter(p => p.status === 'Aguardando Documentos' || p.status === 'Aguardando Recurso de Apelação'),
       'Concluído': processes.filter(p => p.status === 'Concluído')
     };
 
