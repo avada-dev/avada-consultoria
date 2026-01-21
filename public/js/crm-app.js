@@ -292,8 +292,8 @@ async function loadDashboard() {
     const stats = {
       totalClients: clients.length,
       totalProcesses: processes.length,
-      // Active = Em Andamento + Ok Feito + others not concluded/archived
-      activeProcesses: processes.filter(p => ['Em Andamento', 'Ok Feito', 'Pendente', 'Aguardando Documentos', 'Aguardando Recurso de Apelação'].includes(p.status)).length,
+      // Active = Em Andamento + Ok Feito + Pendente + ANY status starting with 'Aguardando'
+      activeProcesses: processes.filter(p => ['Em Andamento', 'Ok Feito', 'Pendente'].includes(p.status) || p.status.startsWith('Aguardando')).length,
       completedProcesses: processes.filter(p => p.status === 'Concluído').length
     };
 
@@ -302,7 +302,7 @@ async function loadDashboard() {
     const kanbanColumns = {
       'Em Andamento': processes.filter(p => p.status === 'Em Andamento' || p.status === 'Ok Feito'),
       'Pendente': processes.filter(p => p.status === 'Pendente'),
-      'Aguardando': processes.filter(p => p.status === 'Aguardando Documentos' || p.status === 'Aguardando Recurso de Apelação'),
+      'Aguardando': processes.filter(p => p.status.startsWith('Aguardando')),
       'Concluído': processes.filter(p => p.status === 'Concluído')
     };
 
