@@ -150,7 +150,85 @@ function showDashboard() {
   } else {
     console.warn('Deadline alerts script not loaded');
   }
+
+  // --- NEW FEATURE: Notification for 'Ok Feito' ---
+  checkDoneNotifications();
 }
+
+// Function to notify lawyer when a task is marked "Ok Feito" by AVADA
+async function checkDoneNotifications() {
+  // Only for Lawyers
+  if (currentUser.role === 'admin') return;
+
+  try {
+    const response = await fetchAPI('/processes'); // Fetch my processes
+    const doneProcesses = response.filter(p => p.status === 'Ok Feito');
+
+    if (doneProcesses.length === 0) return;
+
+    // Check LocalStorage for seen notifications
+    const seenMap = JSON.parse(localStorage.getItem('seen_ok_feito_notifications') || '{}');
+    const newNotifications = [];
+
+    doneProcesses.forEach(p => {
+      // Use updated_at as a unique signature of the "event"
+      // If we don't have updated_at, fallback to forcing once
+      const timestamp = p.updated_at || 'unknown';
+
+      // Key = ProcessID + Timestamp (so if it changes back and forth, we notify again)
+      const key = `${p.id}_${timestamp}`;
+
+      if (!seenMap[key]) {
+        newNotifications.push(p);
+        seenMap[key] = true; // Mark as seen locally immediately to prevent spam loop if err
+      }
+    });
+
+    if (newNotifications.length > 0) {
+      // Show Popup
+      showOkFeitoPopup(newNotifications);
+      // Save updated seen map
+      localStorage.setItem('seen_ok_feito_notifications', JSON.stringify(seenMap));
+    }
+
+  } catch (err) {
+    console.error('Error checking done notifications', err);
+  }
+}
+
+function showOkFeitoPopup(processes) {
+  const popup = document.createElement('div');
+  popup.className = 'deadline-popup'; // Reusing the Alert Popup style
+  popup.style.display = 'flex';
+  popup.style.zIndex = '9999';
+
+  let listHtml = processes.map(p => `
+      <li style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+        <strong>Processo ${p.case_number}</strong><br>
+        Cliente: ${p.client_name}<br>
+        <span style="color: #28a745; font-weight: bold;">✅ Status atualizado para: Ok Feito</span><br>
+        <small>Data da atualização: ${p.updated_at ? new Date(p.updated_at).toLocaleDateString() : 'Hoje'}</small>
+      </li>
+    `).join('');
+
+  popup.innerHTML = `
+      <div class="deadline-popup-content" style="border-top: 5px solid #28a745;">
+          <h2 style="color: #28a745;">🎉 Tarefas Concluídas!</h2>
+          <p>O Administrador sinalizou os seguintes processos como prontos:</p>
+          <ul style="list-style: none; padding: 0; max-height: 300px; overflow-y: auto;">
+            ${listHtml}
+          </ul>
+          <div class="popup-actions">
+              <button onclick="document.body.removeChild(this.closest('.deadline-popup'))" class="btn btn-primary" style="background-color: #28a745; border-color: #28a745;">Entendido</button>
+          </div>
+      </div>
+    `;
+
+  document.body.appendChild(popup);
+  // Add 'show' class for animation if css supports it, otherwise display flex is enough
+  setTimeout(() => popup.classList.add('show'), 10);
+}
+
 
 // ==========================================
 // VIEW SWITCHING
@@ -639,13 +717,8 @@ function openProcessModal(process = null) {
       document.getElementById('process-state').value = process.state || '';
       // Trigger city population if state exists
       if (process.state && typeof window.loadCitiesByState === 'function') {
-        window.loadCitiesByState();
-        // Set city after cities are loaded
-        setTimeout(() => {
-          if (document.getElementById('process-city')) {
-            document.getElementById('process-city').value = process.city || '';
-          }
-        }, 100);
+        // Pass the existing city to be selected after loading
+        window.loadCitiesByState(process.city);
       }
     }
 
@@ -687,7 +760,7 @@ function closeProcessModal() {
 }
 
 // Global function to load cities
-window.loadCitiesByState = async function () {
+window.loadCitiesByState = async function (preSelectedCity = null) {
   const stateSelect = document.getElementById('process-state');
   const citySelect = document.getElementById('process-city');
   const state = stateSelect.value;
@@ -697,6 +770,8 @@ window.loadCitiesByState = async function () {
     return;
   }
 
+  // If simply switching states, show loading. 
+  // If pre-selecting (edit mode), we might want to keep "Carregando..." too.
   citySelect.innerHTML = '<option value="">Carregando...</option>';
 
   try {
@@ -708,6 +783,11 @@ window.loadCitiesByState = async function () {
 
     citySelect.innerHTML = '<option value="">Selecione...</option>' +
       cities.map(city => `<option value="${city}">${city}</option>`).join('');
+
+    // If a city needs to be selected (Edit Mode)
+    if (preSelectedCity) {
+      citySelect.value = preSelectedCity;
+    }
 
   } catch (error) {
     console.error('Erro ao carregar cidades:', error);
@@ -1290,6 +1370,7 @@ async function fetchAPI(endpoint, method = 'GET', body = null) {
 function getStatusBadge(status) {
   const badges = {
     'Concluído': 'badge-success',
+    'Ok Feito': 'badge-success',
     'Em Andamento': 'badge-info',
     'Aguardando Documentos': 'badge-warning',
     'Arquivado': 'badge-danger'

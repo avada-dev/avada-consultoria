@@ -36,7 +36,7 @@ function categorizeProcessesByDeadline(processes) {
     };
 
     processes.forEach(process => {
-        if (!process.deadline || process.status === 'Concluído' || process.status === 'Arquivado') {
+        if (!process.deadline || process.status === 'Concluído' || process.status === 'Arquivado' || process.status === 'Ok Feito') {
             return;
         }
 
