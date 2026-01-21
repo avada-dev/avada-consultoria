@@ -832,6 +832,25 @@ window.loadCitiesByState = async function (preSelectedCity = null) {
   }
 };
 
+// Filter cities in the dropdown
+window.filterCityOptions = function () {
+  const input = document.getElementById('city-search');
+  const filter = input.value.toLowerCase();
+  const select = document.getElementById('process-city');
+  const options = select.getElementsByTagName('option');
+
+  for (let i = 0; i < options.length; i++) {
+    const txtValue = options[i].textContent || options[i].innerText;
+    // Always show the first option ("Select...") or options that match
+    if (i === 0 || txtValue.toLowerCase().indexOf(filter) > -1) {
+      options[i].style.display = "";
+    } else {
+      options[i].style.display = "none";
+    }
+  }
+}
+
+
 function editProcess(process) {
   openProcessModal(process);
 }

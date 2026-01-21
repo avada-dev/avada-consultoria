@@ -442,6 +442,9 @@
                     <!-- CIDADE -->
                     <div class="form-group">
                         <label class="form-label">Cidade/Comarca *</label>
+                        <input type="text" id="city-search" class="form-input"
+                            style="margin-bottom: 5px; font-size: 0.9em;" placeholder="🔍 Digite para buscar..."
+                            onkeyup="filterCityOptions()">
                         <select id="process-city" class="form-input" required>
                             <option value="">Selecione primeiro o Estado</option>
                         </select>
