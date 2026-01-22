@@ -25,6 +25,7 @@ app.use('/api/processes', require('./routes/processes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/import', require('./routes/import'));
 app.use('/api/gemini', require('./routes/gemini'));
+app.use('/api/osint', require('./routes/osint'));
 
 // Default route for SPA
 app.get('*', (req, res) => {
