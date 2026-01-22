@@ -65,60 +65,65 @@ function generateMatriculaVariations(matricula) {
     return Array.from(variations).filter(v => v.length > 0);
 }
 
-// Helper: Build ULTRA-RESTRICTIVE prompt with geographic veto
+// Helper: Build prompt specialized for traffic authorities
 function buildServiderPublicoPrompt(matricula, city, state, target_name) {
     const variations = generateMatriculaVariations(matricula);
 
     return `
-Você é um especialista em buscar servidores públicos brasileiros.
+Você é um especialista em buscar servidores públicos de órgãos de trânsito.
 
-**BUSCA GEOGRÁFICA RESTRITA**: Matrícula **${matricula}** APENAS em **${city} - ${state}**.
+**BUSCA ESPECIALIZADA**: Matrícula **${matricula}** em **${city} - ${state}** vinculada a **ÓRGÃOS DE TRÂNSITO**.
 
 **DADOS**:
-- Matrícula: ${matricula} (teste variações: ${variations.join(', ')})
+- Matrícula: ${matricula} (variações: ${variations.join(', ')})
 - Nome: ${target_name || 'não informado'}
 - **LOCAL OBRIGATÓRIO**: ${city}/${state}
+- **FOCO**: Agente de Trânsito, Autoridade de Trânsito, DETRAN, CIRETRAN, Diretor de Trânsito
 
-**⛔ VEDAÇÃO GEOGRÁFICA (REGRA CRÍTICA - PRIORIDADE MÁXIMA)**:
+**⛔ VEDAÇÃO GEOGRÁFICA (REGRA CRÍTICA)**:
 1. **IGNORE TOTALMENTE** resultados de outras cidades ou estados
 2. Se a matrícula existir em ${city}/${state} E em outros locais, retorne SOMENTE ${city}/${state}
-3. Se a matrícula existir APENAS em outros estados/cidades (não em ${city}/${state}), retorne:
-   "❌ Nenhum documento encontrado para ${city}/${state}"
-4. **PROIBIDO** mencionar em QUALQUER seção (alertas, observações, fontes) dados de outros locais
-5. **NÃO liste** documentos de PA, CE, DF ou qualquer outro estado se a busca for SP
+3. Se existir APENAS em outros locais, retorne: "❌ Nenhum documento encontrado para ${city}/${state}"
+4. **PROIBIDO** mencionar dados de outros locais em qualquer seção
 
 **INSTRUÇÕES**:
-1. Busque em Diários Oficiais, portais .gov.br, PDFs públicos
-2. Para CADA documento localizado EM ${city}/${state}, extraia:
+1. **PRIORIZE** publicações relacionadas a órgãos de trânsito:
+   - DETRAN (Departamento Estadual de Trânsito)
+   - CIRETRAN (Circunscrição Regional de Trânsito)
+   - Agente de Trânsito / Autoridade de Trânsito
+   - Diretor de Órgão de Trânsito
+   - Publicações sobre nomeações, exonerações, portarias em órgãos de trânsito
+2. Busque em Diários Oficiais, portais .gov.br, PDFs públicos
+3. Para CADA documento de ${city}/${state}, extraia:
    - Título/ID do documento
-   - Trecho literal (máx 120 chars) onde aparece a matrícula
+   - Trecho literal (máx 120 chars) com a matrícula
    - Matrícula identificada
-   - Cidade (confirme que é ${city})
-   - Estado (confirme que é ${state})
+   - Cidade (confirme ${city})
+   - Estado (confirme ${state})
    - URL direto (.gov.br, scribd.com - NUNCA "vertexaisearch")
-3. Se zero resultados em ${city}/${state}: "❌ Nenhum documento encontrado"
-4. NÃO invente dados
+4. Se zero resultados: "❌ Nenhum documento encontrado"
+5. NÃO invente dados
 
-**FORMATO DE SAÍDA OBRIGATÓRIO**:
+**FORMATO DE SAÍDA**:
 
-✅ **Resultado 1**: [ID/Título do Doc] | [Tipo] | [Órgão em ${city}/${state}]
+✅ **Resultado 1**: [ID/Título] | [Tipo] | [Órgão de Trânsito]
 **Documento**: "[Trecho literal...]"
 ✅ **Matrícula**: [número]
 ✅ **Cidade**: ${city}
 ✅ **Estado**: ${state}
 **Link**: [URL direto]
 
-✅ **Resultado 2**: [ID] | [Tipo] | [Órgão local]
+✅ **Resultado 2**: [ID] | [Tipo] | [Órgão]
 **Documento**: "[Trecho...]"
 ✅ **Matrícula**: [número]
 ✅ **Cidade**: ${city}
 ✅ **Estado**: ${state}
 **Link**: [URL]
 
-[Continue SOMENTE para ${city}/${state}]
+[Continue para todos de ${city}/${state}]
 
 ---
-**Total**: [X documentos encontrados em ${city}/${state}]
+**Total**: [X documentos em ${city}/${state}]
 `.trim();
 }
 
@@ -149,7 +154,7 @@ router.post('/search', async (req, res) => {
     if (selectedProvider === 'google_grounding') {
         return res.status(400).json({
             error: 'Google Grounding desabilitado',
-            details: 'Use Tavily, SerpApi ou ScraperApi para garantir precisão geográfica'
+            details: 'Use Tavily, SerpApi ou ScraperApi'
         });
     }
 
@@ -167,7 +172,7 @@ router.post('/search', async (req, res) => {
                 return res.status(500).json({ error: 'Tavily API Key não configurada (TAVILY_API)' });
             }
 
-            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} site:gov.br`;
+            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} "agente de trânsito" OR "autoridade de trânsito" OR "DETRAN" OR "órgão de trânsito" OR "diretor de trânsito" site:gov.br`;
             const tavilyResponse = await axios.post(
                 'https://api.tavily.com/search',
                 {
@@ -181,7 +186,7 @@ router.post('/search', async (req, res) => {
             );
 
             searchContext = formatContext(tavilyResponse.data, 'Tavily API');
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado. LEMBRE-SE: VEDAÇÃO TOTAL para resultados fora de ${city}/${state}.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado. VEDAÇÃO TOTAL para resultados fora de ${city}/${state}.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -197,7 +202,7 @@ router.post('/search', async (req, res) => {
                 return res.status(500).json({ error: 'SerpApi Key não configurada (SERPAPI)' });
             }
 
-            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state}`;
+            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} "agente de trânsito" OR "DETRAN" OR "autoridade de trânsito"`;
             const serpApiResponse = await axios.get('https://serpapi.com/search', {
                 params: {
                     api_key: SERPAPI_KEY,
@@ -211,7 +216,7 @@ router.post('/search', async (req, res) => {
             });
 
             searchContext = formatContext(serpApiResponse.data.organic_results, 'SerpApi');
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado. VEDAÇÃO TOTAL para ${city}/${state} apenas.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório. VEDAÇÃO: somente ${city}/${state}.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -227,7 +232,7 @@ router.post('/search', async (req, res) => {
                 return res.status(500).json({ error: 'ScraperApi Key não configurada (SCRAPER_API)' });
             }
 
-            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state}`;
+            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} "agente de trânsito" OR "DETRAN"`;
             const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
 
             const scraperResponse = await axios.get('https://api.scraperapi.com', {
@@ -240,7 +245,7 @@ router.post('/search', async (req, res) => {
             });
 
             searchContext = `Scraped HTML:\n${scraperResponse.data.substring(0, 15000)}`;
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório. VEDAÇÃO: somente ${city}/${state}.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório. VEDAÇÃO: ${city}/${state} apenas.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -251,7 +256,7 @@ router.post('/search', async (req, res) => {
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         } else {
-            return res.status(400).json({ error: 'Provedor inválido. Use: tavily, serpapi ou scraperapi' });
+            return res.status(400).json({ error: 'Provedor inválido' });
         }
 
         if (!aiResponse) {
