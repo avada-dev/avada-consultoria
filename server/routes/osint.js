@@ -156,12 +156,7 @@ router.post('/search', async (req, res) => {
             const requestBody = {
                 contents: [{ parts: [{ text: prompt }] }],
                 tools: [{
-                    google_search_retrieval: {
-                        dynamic_retrieval_config: {
-                            mode: "MODE_DYNAMIC",
-                            dynamic_threshold: 0.3
-                        }
-                    }
+                    googleSearch: {}
                 }]
             };
 
