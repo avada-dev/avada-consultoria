@@ -3,9 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 const db = require('../database'); // Adjust path as needed based on server structure
 
-// Hardcoded Gemini Key (as requested by user "already configured")
-// Retrieving from the test file found earlier.
-const GEMINI_API_KEY = "AIzaSyA_8lnHira2KHhMIF_1Nmthb2qBWErdSRk";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
 // Using 2.0-flash-exp (or whatever is latest stable that supports tools)
 // Actually user asked for "gemini 2.5 flash". That model name might not explicitly exist in public API yet, 
@@ -20,7 +18,7 @@ const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (token == null) return res.sendStatus(401);
-    
+
     const jwt = require('jsonwebtoken');
     jwt.verify(token, process.env.JWT_SECRET || 'avada_consultoria_secret_key_2026_traffic_law_system', (err, user) => {
         if (err) return res.sendStatus(403);
@@ -86,7 +84,7 @@ router.post('/search', async (req, res) => {
         );
 
         const aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
+
         if (!aiResponse) {
             throw new Error('Sem resposta da IA.');
         }
@@ -95,7 +93,7 @@ router.post('/search', async (req, res) => {
         db.run(
             `INSERT INTO osint_searches (user_id, target_name, target_id, city, state, report_content) VALUES (?, ?, ?, ?, ?, ?)`,
             [req.user.id, target_name || 'Desconhecido', matricula, city, state, aiResponse],
-            function(err) {
+            function (err) {
                 if (err) console.error("Erro ao salvar histórico:", err);
             }
         );
@@ -104,9 +102,9 @@ router.post('/search', async (req, res) => {
 
     } catch (error) {
         console.error('[OSINT ERROR]', error.response?.data || error.message);
-        res.status(500).json({ 
-            error: 'Erro ao processar busca OSINT.', 
-            details: error.response?.data?.error?.message || error.message 
+        res.status(500).json({
+            error: 'Erro ao processar busca OSINT.',
+            details: error.response?.data?.error?.message || error.message
         });
     }
 });
