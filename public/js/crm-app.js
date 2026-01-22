@@ -691,7 +691,9 @@ async function loadProcesses(archived = false) {
             </tr>
           </thead>
           <tbody>
-            ${processes.map(p => `
+            ${processes.map(p => {
+              const isCritical = p.deadline && isDateCritical(p.deadline);
+              return `
               <tr>
                 <td onclick="viewFullProcess(${p.id})" style="cursor: pointer; color: #667eea; font-weight: 600;"><strong>${p.case_number}</strong></td>
                 <td>${p.client_name || 'N/A'}</td>
@@ -699,7 +701,10 @@ async function loadProcesses(archived = false) {
                 <td>${p.phase || '-'}</td>
                 <td>${p.lawyer_name || '-'}</td>
                 <td><span class="badge ${getStatusBadge(p.status)}">${p.status}</span></td>
-                <td>${p.deadline ? formatDate(p.deadline) : '-'}</td>
+                <td>
+                    ${p.deadline ? formatDate(p.deadline) : '-'}
+                    ${isCritical ? '<br><span style="color: red; font-weight: bold; font-size: 0.8em; text-transform: uppercase;">PRAZO SE VENCENDO</span>' : ''}
+                </td>
                 <td class="table-actions">
                   <button class="btn btn-sm btn-secondary" onclick='editProcess(${JSON.stringify(p).replace(/'/g, "&apos;")})' title="Editar">
                     <i class="fas fa-edit"></i>
@@ -719,7 +724,7 @@ async function loadProcesses(archived = false) {
                   </button>`}
                 </td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       </div>
@@ -950,12 +955,8 @@ function toggleOtherField(type) {
 // ==========================================
 
 async function viewProcess(id) {
-  try {
-    const process = await fetchAPI(`/processes/${id}`);
-    alert(`Detalhes do Processo ${process.case_number}\n\nCliente: ${process.client_name}\nTipo: ${process.type}\nStatus: ${process.status}\nDescrição: ${process.description || 'Sem descrição'}`);
-  } catch (error) {
-    alert('Erro ao carregar processo: ' + error.message);
-  }
+  // Opening the full process folder view instead of popup
+  await viewFullProcess(id);
 }
 
 async function viewClientFull(id) {
@@ -1109,6 +1110,26 @@ function isDateNear(dateString) {
   const diffTime = deadline - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays <= 5 && diffDays >= 0;
+}
+
+// Critical check for <= 2 days
+function isDateCritical(dateString) {
+  const today = new Date();
+  const deadline = new Date(dateString);
+  const diffTime = deadline - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 2 && diffDays >= -1; // -1 to include Just Expired or Today
+}
+
+// Critical check for <= 2 days
+function isDateCritical(dateString) {
+  const today = new Date();
+  const deadline = new Date(dateString);
+  const diffTime = deadline - today;
+  // Use Math.floor/ceil carefully. 
+  // If deadline is tomorrow, diffDays ~ 1.
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 2 && diffDays >= -1; // -1 to include Just Expired or Today
 }
 
 // ==========================================

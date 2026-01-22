@@ -112,11 +112,14 @@ function showDeadlinePopup(alerts) {
                 <ul>
         `;
         alerts.warning.forEach(process => {
+            // Check for Urgent (<= 2 days)
+            const isUrgent = process.daysRemaining <= 2;
             popupContent += `
                 <li>
                     <strong>${process.case_number}</strong> - ${process.client_name}<br>
                     <span class="alert-detail">Vence em ${process.daysRemaining} dia(s)</span><br>
                     <span class="alert-deadline">Prazo: ${formatDate(process.deadline)}</span>
+                    ${isUrgent ? '<br><span style="color: red; font-weight: bold; font-size: 0.8em; text-transform: uppercase;">PRAZO SE VENCENDO</span>' : ''}
                     <button class="btn-sm" onclick="viewProcess(${process.id})">Ver Detalhes</button>
                 </li>
             `;

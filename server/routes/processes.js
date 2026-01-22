@@ -59,7 +59,11 @@ router.get('/', authenticate, (req, res) => {
         params.push(req.user.id);
     }
 
-    query += ' ORDER BY p.created_at DESC';
+    // Order by deadline ASC (upcoming deadlines first), then created_at DESC for those without deadline
+    // SQL: putting NULLs last usually requires specific syntax or IS NULL check.
+    // SQLite: ORDER BY deadline ASC puts NULLs first by default? No, usually first.
+    // We want upcoming dates first.
+    query += ' ORDER BY CASE WHEN p.deadline IS NULL THEN 1 ELSE 0 END, p.deadline ASC';
 
     console.log('[DEBUG] Final SQL query:', query);
     console.log('[DEBUG] SQL params:', params);
