@@ -65,52 +65,60 @@ function generateMatriculaVariations(matricula) {
     return Array.from(variations).filter(v => v.length > 0);
 }
 
-// Helper: Build prompt with new format
+// Helper: Build ULTRA-RESTRICTIVE prompt with geographic veto
 function buildServiderPublicoPrompt(matricula, city, state, target_name) {
     const variations = generateMatriculaVariations(matricula);
 
     return `
-Você é um especialista em buscar servidores públicos em documentos oficiais.
+Você é um especialista em buscar servidores públicos brasileiros.
 
-**TAREFA**: Localizar DOCUMENTOS que mencionem matrícula **${matricula}** em **${city} - ${state}**.
+**BUSCA GEOGRÁFICA RESTRITA**: Matrícula **${matricula}** APENAS em **${city} - ${state}**.
 
-**DADOS DA BUSCA**:
-- Matrícula: ${matricula} (variações: ${variations.join(', ')})
-- Nome provável: ${target_name || 'não informado'}
-- Local: ${city}/${state}
+**DADOS**:
+- Matrícula: ${matricula} (teste variações: ${variations.join(', ')})
+- Nome: ${target_name || 'não informado'}
+- **LOCAL OBRIGATÓRIO**: ${city}/${state}
 
-**REGRAS**:
+**⛔ VEDAÇÃO GEOGRÁFICA (REGRA CRÍTICA - PRIORIDADE MÁXIMA)**:
+1. **IGNORE TOTALMENTE** resultados de outras cidades ou estados
+2. Se a matrícula existir em ${city}/${state} E em outros locais, retorne SOMENTE ${city}/${state}
+3. Se a matrícula existir APENAS em outros estados/cidades (não em ${city}/${state}), retorne:
+   "❌ Nenhum documento encontrado para ${city}/${state}"
+4. **PROIBIDO** mencionar em QUALQUER seção (alertas, observações, fontes) dados de outros locais
+5. **NÃO liste** documentos de PA, CE, DF ou qualquer outro estado se a busca for SP
+
+**INSTRUÇÕES**:
 1. Busque em Diários Oficiais, portais .gov.br, PDFs públicos
-2. Para CADA documento encontrado, extraia:
+2. Para CADA documento localizado EM ${city}/${state}, extraia:
    - Título/ID do documento
    - Trecho literal (máx 120 chars) onde aparece a matrícula
    - Matrícula identificada
-   - Cidade mencionada  
-   - Estado mencionado
-   - URL real (NUNCA "vertexaisearch" - apenas .gov.br, scribd.com, jus.br, etc)
-3. Se NÃO encontrar: retorne "❌ Nenhum documento encontrado"
+   - Cidade (confirme que é ${city})
+   - Estado (confirme que é ${state})
+   - URL direto (.gov.br, scribd.com - NUNCA "vertexaisearch")
+3. Se zero resultados em ${city}/${state}: "❌ Nenhum documento encontrado"
 4. NÃO invente dados
 
 **FORMATO DE SAÍDA OBRIGATÓRIO**:
 
-✅ **Resultado 1**: [ID/Título do Doc] | [Tipo: PDF/DO/etc] | [Órgão]
-**Documento**: "[Trecho literal onde aparece matrícula - máx 120 chars]..."
-✅ **Matrícula**: [número]  
-✅ **Cidade**: [cidade]
-✅ **Estado**: [sigla UF]
+✅ **Resultado 1**: [ID/Título do Doc] | [Tipo] | [Órgão em ${city}/${state}]
+**Documento**: "[Trecho literal...]"
+✅ **Matrícula**: [número]
+✅ **Cidade**: ${city}
+✅ **Estado**: ${state}
 **Link**: [URL direto]
 
-✅ **Resultado 2**: [ID] | [Tipo] | [Órgão]
+✅ **Resultado 2**: [ID] | [Tipo] | [Órgão local]
 **Documento**: "[Trecho...]"
 ✅ **Matrícula**: [número]
-✅ **Cidade**: [cidade]
-✅ **Estado**: [UF]
+✅ **Cidade**: ${city}
+✅ **Estado**: ${state}
 **Link**: [URL]
 
-[Continue para todos os resultados]
+[Continue SOMENTE para ${city}/${state}]
 
 ---
-**Total**: [X documentos encontrados]
+**Total**: [X documentos encontrados em ${city}/${state}]
 `.trim();
 }
 
@@ -135,7 +143,16 @@ router.post('/search', async (req, res) => {
         });
     }
 
-    const selectedProvider = provider || 'google_grounding';
+    const selectedProvider = provider || 'tavily';
+
+    // BLOCK Google Grounding
+    if (selectedProvider === 'google_grounding') {
+        return res.status(400).json({
+            error: 'Google Grounding desabilitado',
+            details: 'Use Tavily, SerpApi ou ScraperApi para garantir precisão geográfica'
+        });
+    }
+
     console.log(`[OSINT] Busca via ${selectedProvider}: ${matricula} em ${city}/${state}`);
 
     let aiResponse = "";
@@ -144,26 +161,8 @@ router.post('/search', async (req, res) => {
     try {
         const prompt = buildServiderPublicoPrompt(matricula, city, state, target_name);
 
-        // --- GOOGLE GROUNDING ---
-        if (selectedProvider === 'google_grounding') {
-            const requestBody = {
-                contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ googleSearch: {} }]
-            };
-
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                requestBody,
-                {
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 60000
-                }
-            );
-
-            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            // --- TAVILY API ---
-        } else if (selectedProvider === 'tavily') {
+        // --- TAVILY API ---
+        if (selectedProvider === 'tavily') {
             if (!TAVILY_API_KEY) {
                 return res.status(500).json({ error: 'Tavily API Key não configurada (TAVILY_API)' });
             }
@@ -182,7 +181,7 @@ router.post('/search', async (req, res) => {
             );
 
             searchContext = formatContext(tavilyResponse.data, 'Tavily API');
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado. LEMBRE-SE: VEDAÇÃO TOTAL para resultados fora de ${city}/${state}.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -212,7 +211,7 @@ router.post('/search', async (req, res) => {
             });
 
             searchContext = formatContext(serpApiResponse.data.organic_results, 'SerpApi');
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado. VEDAÇÃO TOTAL para ${city}/${state} apenas.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -241,7 +240,7 @@ router.post('/search', async (req, res) => {
             });
 
             searchContext = `Scraped HTML:\n${scraperResponse.data.substring(0, 15000)}`;
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório. VEDAÇÃO: somente ${city}/${state}.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -252,7 +251,7 @@ router.post('/search', async (req, res) => {
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         } else {
-            return res.status(400).json({ error: 'Provedor inválido' });
+            return res.status(400).json({ error: 'Provedor inválido. Use: tavily, serpapi ou scraperapi' });
         }
 
         if (!aiResponse) {

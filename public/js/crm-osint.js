@@ -16,8 +16,7 @@ async function loadOSINTView() {
                     <div class="form-group mb-4">
                         <label class="form-label">Provedor de Busca *</label>
                         <select id="osint-provider" class="form-input" required>
-                            <option value="google_grounding">Google Grounding (Busca Nativa) - Recomendado</option>
-                            <option value="tavily">Tavily API (Busca Otimizada para IA)</option>
+                            <option value="tavily">Tavily API (Busca Otimizada para IA) - Recomendado</option>
                             <option value="serpapi">SerpApi (Google Search API)</option>
                             <option value="scraperapi">ScraperApi (Web Scraping)</option>
                         </select>
