@@ -166,7 +166,7 @@ router.post('/search', async (req, res) => {
             };
 
             const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
                 requestBody,
                 {
                     headers: { 'Content-Type': 'application/json' },
@@ -259,7 +259,7 @@ router.post('/search', async (req, res) => {
             const analysisPrompt = `${prompt}\n\nDADOS BRUTOS COLETADOS:\n${searchContext}\n\nAnalise os dados acima e gere o relatório no formato solicitado.`;
 
             const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
                 { contents: [{ parts: [{ text: analysisPrompt }] }] },
                 {
                     headers: { 'Content-Type': 'application/json' },
