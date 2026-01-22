@@ -2,12 +2,12 @@
 
 async function loadOSINTView() {
     console.log('[FRONTEND] Loading OSINT View');
-    document.getElementById('page-title').textContent = 'Ferramenta OSINT (BETA)';
+    document.getElementById('page-title').textContent = 'Buscar Servidor';
 
     const html = `
         <div class="osint-container" style="max-width: 800px; margin: 0 auto;">
             <div class="info-card mb-4" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                <h3 style="color: #2d3748; margin-bottom: 15px;"><i class="fas fa-search-location" style="color: #667eea;"></i> Investigação de Servidor Público</h3>
+                <h3 style="color: #2d3748; margin-bottom: 15px;"><i class="fas fa-user-shield" style="color: #667eea;"></i> Buscar Servidor Público</h3>
                 <p class="text-gray-600 mb-4">
                     Utilize esta ferramenta para buscar informações públicas (Portal da Transparência, Diários Oficiais) utilizando Inteligência Artificial.
                 </p>
