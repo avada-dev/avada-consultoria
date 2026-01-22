@@ -25,6 +25,26 @@ const authenticateToken = (req, res, next) => {
 
 router.use(authenticateToken);
 
+// DIAGNOSTIC ENDPOINT - Remove after debugging
+router.get('/diagnostic', (req, res) => {
+    const keyExists = !!GEMINI_API_KEY;
+    const keyPreview = GEMINI_API_KEY
+        ? `${GEMINI_API_KEY.substring(0, 10)}...${GEMINI_API_KEY.substring(GEMINI_API_KEY.length - 5)}`
+        : 'NOT SET';
+
+    res.json({
+        gemini_key_configured: keyExists,
+        gemini_key_preview: keyPreview,
+        tavily_configured: !!TAVILY_API_KEY,
+        serpapi_configured: !!SERPAPI_KEY,
+        scraperapi_configured: !!SCRAPERAPI_KEY,
+        env_check: {
+            NODE_ENV: process.env.NODE_ENV,
+            has_process_env: typeof process.env === 'object'
+        }
+    });
+});
+
 // GET History
 router.get('/history', (req, res) => {
     db.all('SELECT * FROM osint_searches WHERE user_id = ? ORDER BY created_at DESC', [req.user.id], (err, rows) => {
