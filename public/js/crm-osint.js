@@ -13,6 +13,17 @@ async function loadOSINTView() {
                 </p>
                 
                 <form id="osint-form" onsubmit="handleOSINTSearch(event)">
+                    <div class="form-group mb-4">
+                        <label class="form-label">Provedor de Busca *</label>
+                        <select id="osint-provider" class="form-input" required>
+                            <option value="google_grounding">Google Grounding (Nativo do Gemini 2.5) - Recomendado</option>
+                            <option value="tavily">Tavily API (Busca Otimizada para IA)</option>
+                            <option value="serpapi">SerpApi (Google Search API)</option>
+                            <option value="scraperapi">ScraperApi (Web Scraping)</option>
+                        </select>
+                        <small class="text-gray-500">Escolha a tecnologia que será usada para varrer a internet.</small>
+                    </div>
+
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Matrícula / ID *</label>

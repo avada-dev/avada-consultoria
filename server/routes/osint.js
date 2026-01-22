@@ -3,15 +3,11 @@ const router = express.Router();
 const axios = require('axios');
 const db = require('../database'); // Adjust path as needed based on server structure
 
+// Environment Variables for Keys
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
-// Using 2.0-flash-exp (or whatever is latest stable that supports tools)
-// Actually user asked for "gemini 2.5 flash". That model name might not explicitly exist in public API yet, 
-// likely he means 1.5-flash or the 2.0-flash-exp which acts like it. 
-// I will try 'gemini-2.0-flash-exp' first as it is the cutting edge, or 'gemini-1.5-flash' if safer.
-// User insisted on "2.5". I'll try to find the closest match or use 1.5 Pro/Flash which is robust. 
-// Let's stick to 2.0-flash-exp if available or 1.5-flash.
-// Wait, 'gemini-2.0-flash-exp' supports search? Yes.
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
+const SERPAPI_KEY = process.env.SERPAPI_KEY;
+const SCRAPERAPI_KEY = process.env.SCRAPERAPI_KEY;
 
 // Middleware to check auth
 const authenticateToken = (req, res, next) => {
@@ -37,57 +33,124 @@ router.get('/history', (req, res) => {
     });
 });
 
+// Helper: Format Context for Gemini
+function formatContext(results, provider) {
+    if (!results) return "Nenhum resultado bruto encontrado.";
+    return `Resultados extraídos via ${provider}:\n\n${JSON.stringify(results, null, 2).substring(0, 30000)}`; // Limit context size
+}
+
 // POST Search
 router.post('/search', async (req, res) => {
-    const { matricula, city, state, target_name } = req.body;
+    const { matricula, city, state, target_name, provider } = req.body;
 
     if (!matricula || !city || !state) {
         return res.status(400).json({ error: 'Dados insuficientes. Informe Matrícula, Cidade e Estado.' });
     }
 
+    const selectedProvider = provider || 'google_grounding';
+    console.log(`[OSINT] Iniciando busca via ${selectedProvider} para ${matricula}`);
+
+    let aiResponse = "";
+    let searchContext = "";
+
     try {
-        console.log(`[OSINT] Iniciando busca para ${matricula} em ${city}/${state}`);
+        // --- STRATEGY 1: NATIVE GOOGLE GROUNDING (DEFAULT) ---
+        if (selectedProvider === 'google_grounding') {
+            const prompt = `
+                Atue como um especialista em OSINT.
+                Investigue: ${matricula}, ${target_name || ''} em ${city}-${state}.
+                Busque por vínculos públicos, diários oficiais e processos.
+                Retorne um relatório Markdown detalhado.
+            `;
 
-        // Construct Prompt for Gemini with Grounding
-        const prompt = `
-            Atue como um especialista em OSINT (Open Source Intelligence) para auditoria pública.
-            
-            Investigue o seguinte servidor público:
-            Matrícula/ID: ${matricula}
-            Nome (se houver): ${target_name || "Desconhecido"}
-            Local: ${city} - ${state}
+            const requestBody = {
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ google_search_retrieval: { dynamic_retrieval_config: { mode: "MODE_DYNAMIC", dynamic_threshold: 0.3 } } }]
+            };
 
-            Objetivo: Encontrar informações públicas sobre vínculos, remuneração, diários oficiais, processos judiciais ou administrativos em aberto.
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                requestBody,
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-            Use a ferramenta de busca do Google para encontrar dados RECENTES e RELEVANTES.
-            
-            Retorne um relatório estruturado em Markdown contendo:
-            1. Resumo do Perfil (Nome confirmado, Cargo, Órgão).
-            2. Vínculos e Remuneração (se encontrado no Portal da Transparência).
-            3. Processos e Diários Oficiais (menções em DOs).
-            4. Outras informações relevantes (redes sociais profissionais, empresas em nome, etc).
-            
-            Se não encontrar nada, seja honesto. Não alucine dados.
-        `;
+            // --- STRATEGY 2: TAVILY API ---
+        } else if (selectedProvider === 'tavily') {
+            if (!TAVILY_API_KEY) throw new Error('Chave Tavily não configurada.');
 
-        const requestBody = {
-            contents: [{ parts: [{ text: prompt }] }],
-            tools: [{ google_search_retrieval: { dynamic_retrieval_config: { mode: "MODE_DYNAMIC", dynamic_threshold: 0.3 } } }]
-        };
+            const query = `Servidor público matrícula ${matricula} ${city} ${state} ${target_name || ''} diario oficial portal transparencia`;
+            const tavilyResponse = await axios.post('https://api.tavily.com/search', {
+                api_key: TAVILY_API_KEY,
+                query: query,
+                search_depth: "advanced",
+                include_answer: true
+            });
 
-        // Call Gemini
-        // Using gemini-1.5-flash which definitely supports grounding. 2.0-flash-exp is safer bet for latest.
-        const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-            requestBody,
-            { headers: { 'Content-Type': 'application/json' } }
-        );
+            searchContext = formatContext(tavilyResponse.data, 'Tavily');
 
-        const aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+            // --- STRATEGY 3: SERPAPI ---
+        } else if (selectedProvider === 'serpapi') {
+            if (!SERPAPI_KEY) throw new Error('Chave SerpApi não configurada.');
 
-        if (!aiResponse) {
-            throw new Error('Sem resposta da IA.');
+            const query = `Servidor público ${matricula} ${city} ${state} filetype:pdf OR site:.gov.br`;
+            const serpResponse = await axios.get(`https://serpapi.com/search`, {
+                params: {
+                    api_key: SERPAPI_KEY,
+                    q: query,
+                    location: "Brazil",
+                    hl: "pt-br",
+                    gl: "br"
+                }
+            });
+
+            searchContext = formatContext(serpResponse.data.organic_results, 'SerpApi');
+
+            // --- STRATEGY 4: SCRAPERAPI ---
+        } else if (selectedProvider === 'scraperapi') {
+            if (!SCRAPERAPI_KEY) throw new Error('Chave ScraperApi não configurada.');
+
+            // ScraperAPI is a proxy. We need to scrape a specific target. 
+            // Since we don't have a URL, we'll try to scrape a Google Search Result page directly (risky but common)
+            // or just inform limitation. Actually ScraperApi usually proxies a GET request.
+            const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(`Servidor ${matricula} ${city} ${state}`)}`;
+            const scraperResponse = await axios.get(`http://api.scraperapi.com`, {
+                params: {
+                    api_key: SCRAPERAPI_KEY,
+                    url: targetUrl
+                }
+            });
+
+            searchContext = formatContext(scraperResponse.data, 'ScraperApi (Google Proxy)');
         }
+
+        // --- GEMINI ANALYSIS (IF NOT GROUNDING) ---
+        if (selectedProvider !== 'google_grounding') {
+            if (!searchContext) throw new Error('Provedor não retornou dados úteis.');
+
+            const analysisPrompt = `
+                Atue como especialista OSINT. Analise os DADOS BRUTOS abaixo coletados via ${selectedProvider}.
+                ALVO: ${matricula} - ${city}/${state} - ${target_name || ''}
+                
+                DADOS BRUTOS:
+                ${searchContext}
+                
+                Gere um relatório em Markdown com:
+                1. Identificação Confirmada (se houver).
+                2. Vínculos e Cargos.
+                3. Links e Fontes encontradas.
+                Se os dados não forem suficientes, diga claramente.
+            `;
+
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: analysisPrompt }] }] },
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+        }
+
+        if (!aiResponse) throw new Error('Falha ao gerar relatório com a IA.');
 
         // Save to DB
         db.run(
@@ -98,13 +161,13 @@ router.post('/search', async (req, res) => {
             }
         );
 
-        res.json({ success: true, report: aiResponse });
+        res.json({ success: true, report: aiResponse, provider: selectedProvider });
 
     } catch (error) {
         console.error('[OSINT ERROR]', error.response?.data || error.message);
         res.status(500).json({
-            error: 'Erro ao processar busca OSINT.',
-            details: error.response?.data?.error?.message || error.message
+            error: 'Erro na busca OSINT.',
+            details: error.message || 'Erro desconhecido'
         });
     }
 });
