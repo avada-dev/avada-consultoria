@@ -692,8 +692,8 @@ async function loadProcesses(archived = false) {
           </thead>
           <tbody>
             ${processes.map(p => {
-              const isCritical = p.deadline && isDateCritical(p.deadline);
-              return `
+      const isCritical = p.deadline && isDateCritical(p.deadline);
+      return `
               <tr>
                 <td onclick="viewFullProcess(${p.id})" style="cursor: pointer; color: #667eea; font-weight: 600;"><strong>${p.case_number}</strong></td>
                 <td>${p.client_name || 'N/A'}</td>
@@ -1447,8 +1447,10 @@ async function fetchAPI(endpoint, method = 'GET', body = null) {
   const response = await fetch(`${API_URL}${endpoint}`, options);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Erro na requisição');
+    const errorBody = await response.json();
+    const errorObj = new Error(errorBody.error || 'Erro na requisição');
+    errorObj.details = errorBody.details; // Attach details
+    throw errorObj;
   }
 
   return response.json();
