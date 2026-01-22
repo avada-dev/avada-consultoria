@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-const db = require('../database'); // Adjust path as needed based on server structure
+const db = require('../database');
 
 // Environment Variables for Keys
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -33,10 +33,77 @@ router.get('/history', (req, res) => {
     });
 });
 
-// Helper: Format Context for Gemini
+// Helper: Generate matricula variations
+function generateMatriculaVariations(matricula) {
+    const clean = matricula.replace(/[-\s]/g, '');
+    const variations = new Set([
+        matricula.trim(),
+        clean,
+        // Try common patterns
+        clean.replace(/(\d{6})(\d)/, '$1-$2'),
+        clean.replace(/(\d{3})(\d{3})(\d)/, '$1.$2-$3'),
+        clean.replace(/(\d{3})(\d{3})(\d)/, '$1-$2-$3'),
+    ]);
+    return Array.from(variations).filter(v => v.length > 0);
+}
+
+// Helper: Build servidor público specific prompt
+function buildServiderPublicoPrompt(matricula, city, state, target_name) {
+    const variations = generateMatriculaVariations(matricula);
+
+    return `
+Você é um especialista em OSINT para auditoria pública brasileira.
+
+MISSÃO CRÍTICA: Buscar informações EXCLUSIVAMENTE sobre o servidor público identificado pela matrícula "${matricula}".
+
+DADOS DO ALVO:
+- Matrícula: ${matricula} (variações: ${variations.join(', ')})
+- Nome: ${target_name || 'não informado'}
+- Local de atuação: ${city} - ${state}
+
+INSTRUÇÕES OBRIGATÓRIAS:
+1. Use Google Search para buscar APENAS esta matrícula específica
+2. Busque em fontes oficiais: Portal da Transparência, Diários Oficiais (.gov.br), TCE/TCM
+3. Combine matrícula + cidade + estado nas buscas
+4. Se NÃO encontrar dados desta matrícula, retorne "Nenhum dado encontrado para esta matrícula"
+5. NÃO invente dados. Use APENAS informações verificáveis nas fontes
+6. Inclua SEMPRE os links das fontes consultadas
+
+FORMATO DA RESPOSTA (Markdown estrito):
+
+# Servidor Público - Matrícula ${matricula}
+
+## ✅ Status da Busca
+[Encontrado / Nenhum dado encontrado]
+
+## 1. Identificação Confirmada
+- **Nome Completo**: 
+- **Cargo/Função**: 
+- **Órgão/Secretaria**: 
+- **Matrícula**: ${matricula}
+
+## 2. Vínculos e Remuneração
+[Dados do Portal da Transparência - salário, gratificações, etc]
+
+## 3. Publicações em Diários Oficiais
+[Lista de menções em DOs com datas e descrição]
+
+## 4. Processos e Pendências
+[Se houver processos administrativos ou judiciais]
+
+## 5. Fontes Consultadas
+- [Link 1]
+- [Link 2]
+
+---
+**Importante**: Todos os dados acima são públicos e verificáveis nas fontes listadas.
+`.trim();
+}
+
+// Helper: Format Context for external providers
 function formatContext(results, provider) {
-    if (!results) return "Nenhum resultado bruto encontrado.";
-    return `Resultados extraídos via ${provider}:\n\n${JSON.stringify(results, null, 2).substring(0, 30000)}`; // Limit context size
+    if (!results) return "Nenhum resultado encontrado.";
+    return `Resultados de ${provider}:\n\n${JSON.stringify(results, null, 2).substring(0, 30000)}`;
 }
 
 // POST Search
@@ -47,60 +114,90 @@ router.post('/search', async (req, res) => {
         return res.status(400).json({ error: 'Dados insuficientes. Informe Matrícula, Cidade e Estado.' });
     }
 
+    // Validate API Key before proceeding
+    if (!GEMINI_API_KEY) {
+        return res.status(500).json({
+            error: 'Chave Gemini não configurada no servidor',
+            details: 'A variável de ambiente GEMINI_API_KEY não está definida. Configure no Railway.'
+        });
+    }
+
     const selectedProvider = provider || 'google_grounding';
-    console.log(`[OSINT] Iniciando busca via ${selectedProvider} para ${matricula}`);
+    console.log(`[OSINT] Busca via ${selectedProvider}: ${matricula} em ${city}/${state}`);
 
     let aiResponse = "";
     let searchContext = "";
 
     try {
-        // --- STRATEGY 1: NATIVE GOOGLE GROUNDING (DEFAULT) ---
-        if (selectedProvider === 'google_grounding') {
-            const prompt = `
-                Atue como um especialista em OSINT.
-                Investigue: ${matricula}, ${target_name || ''} em ${city}-${state}.
-                Busque por vínculos públicos, diários oficiais e processos.
-                Retorne um relatório Markdown detalhado.
-            `;
+        const prompt = buildServiderPublicoPrompt(matricula, city, state, target_name);
 
+        // --- STRATEGY 1: NATIVE GOOGLE GROUNDING (RECOMMENDED) ---
+        if (selectedProvider === 'google_grounding') {
             const requestBody = {
                 contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ google_search_retrieval: { dynamic_retrieval_config: { mode: "MODE_DYNAMIC", dynamic_threshold: 0.3 } } }]
+                tools: [{
+                    google_search_retrieval: {
+                        dynamic_retrieval_config: {
+                            mode: "MODE_DYNAMIC",
+                            dynamic_threshold: 0.3
+                        }
+                    }
+                }]
             };
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
                 requestBody,
-                { headers: { 'Content-Type': 'application/json' } }
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                }
             );
+
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
             // --- STRATEGY 2: TAVILY API ---
         } else if (selectedProvider === 'tavily') {
-            if (!TAVILY_API_KEY) throw new Error('Chave Tavily não configurada.');
+            if (!TAVILY_API_KEY) {
+                return res.status(400).json({
+                    error: 'Chave Tavily não configurada',
+                    details: 'Defina TAVILY_API_KEY no Railway para usar este provedor'
+                });
+            }
 
-            const query = `Servidor público matrícula ${matricula} ${city} ${state} ${target_name || ''} diario oficial portal transparencia`;
+            const variations = generateMatriculaVariations(matricula);
+            const query = `servidor público matrícula (${variations.join(' OR ')}) ${city} ${state} site:.gov.br`;
+
             const tavilyResponse = await axios.post('https://api.tavily.com/search', {
                 api_key: TAVILY_API_KEY,
                 query: query,
                 search_depth: "advanced",
-                include_answer: true
+                include_answer: true,
+                max_results: 10
             });
 
             searchContext = formatContext(tavilyResponse.data, 'Tavily');
 
             // --- STRATEGY 3: SERPAPI ---
         } else if (selectedProvider === 'serpapi') {
-            if (!SERPAPI_KEY) throw new Error('Chave SerpApi não configurada.');
+            if (!SERPAPI_KEY) {
+                return res.status(400).json({
+                    error: 'Chave SerpApi não configurada',
+                    details: 'Defina SERPAPI_KEY no Railway para usar este provedor'
+                });
+            }
 
-            const query = `Servidor público ${matricula} ${city} ${state} filetype:pdf OR site:.gov.br`;
+            const variations = generateMatriculaVariations(matricula);
+            const query = `(${variations.join(' OR ')}) servidor ${city} ${state} site:.gov.br`;
+
             const serpResponse = await axios.get(`https://serpapi.com/search`, {
                 params: {
                     api_key: SERPAPI_KEY,
                     q: query,
                     location: "Brazil",
                     hl: "pt-br",
-                    gl: "br"
+                    gl: "br",
+                    num: 20
                 }
             });
 
@@ -108,68 +205,97 @@ router.post('/search', async (req, res) => {
 
             // --- STRATEGY 4: SCRAPERAPI ---
         } else if (selectedProvider === 'scraperapi') {
-            if (!SCRAPERAPI_KEY) throw new Error('Chave ScraperApi não configurada.');
+            if (!SCRAPERAPI_KEY) {
+                return res.status(400).json({
+                    error: 'Chave ScraperApi não configurada',
+                    details: 'Defina SCRAPERAPI_KEY no Railway para usar este provedor'
+                });
+            }
 
-            // ScraperAPI is a proxy. We need to scrape a specific target. 
-            // Since we don't have a URL, we'll try to scrape a Google Search Result page directly (risky but common)
-            // or just inform limitation. Actually ScraperApi usually proxies a GET request.
-            const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(`Servidor ${matricula} ${city} ${state}`)}`;
+            const variations = generateMatriculaVariations(matricula);
+            const searchQuery = `servidor ${matricula} ${city} ${state}`;
+            const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+
             const scraperResponse = await axios.get(`http://api.scraperapi.com`, {
                 params: {
                     api_key: SCRAPERAPI_KEY,
                     url: targetUrl
-                }
+                },
+                timeout: 30000
             });
 
-            searchContext = formatContext(scraperResponse.data, 'ScraperApi (Google Proxy)');
+            searchContext = `HTML da busca Google capturado. Tamanho: ${scraperResponse.data.length} caracteres`;
         }
 
-        // --- GEMINI ANALYSIS (IF NOT GROUNDING) ---
+        // --- GEMINI ANALYSIS (for external providers) ---
         if (selectedProvider !== 'google_grounding') {
-            if (!searchContext) throw new Error('Provedor não retornou dados úteis.');
+            if (!searchContext) {
+                return res.status(500).json({
+                    error: 'Nenhum dado retornado pelo provedor',
+                    details: `${selectedProvider} não retornou resultados`
+                });
+            }
 
-            const analysisPrompt = `
-                Atue como especialista OSINT. Analise os DADOS BRUTOS abaixo coletados via ${selectedProvider}.
-                ALVO: ${matricula} - ${city}/${state} - ${target_name || ''}
-                
-                DADOS BRUTOS:
-                ${searchContext}
-                
-                Gere um relatório em Markdown com:
-                1. Identificação Confirmada (se houver).
-                2. Vínculos e Cargos.
-                3. Links e Fontes encontradas.
-                Se os dados não forem suficientes, diga claramente.
-            `;
+            const analysisPrompt = `${prompt}\n\nDADOS BRUTOS COLETADOS:\n${searchContext}\n\nAnalise os dados acima e gere o relatório no formato solicitado.`;
 
             const response = await axios.post(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
                 { contents: [{ parts: [{ text: analysisPrompt }] }] },
-                { headers: { 'Content-Type': 'application/json' } }
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                }
             );
+
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
         }
 
-        if (!aiResponse) throw new Error('Falha ao gerar relatório com a IA.');
+        if (!aiResponse) {
+            return res.status(500).json({
+                error: 'IA não retornou resposta',
+                details: 'Gemini não gerou texto. Possível bloqueio de segurança ou timeout.'
+            });
+        }
 
         // Save to DB
         db.run(
             `INSERT INTO osint_searches (user_id, target_name, target_id, city, state, report_content) VALUES (?, ?, ?, ?, ?, ?)`,
-            [req.user.id, target_name || 'Desconhecido', matricula, city, state, aiResponse],
+            [req.user.id, target_name || 'Servidor Público', matricula, city, state, aiResponse],
             function (err) {
-                if (err) console.error("Erro ao salvar histórico:", err);
+                if (err) console.error("[OSINT] Erro ao salvar histórico:", err);
             }
         );
 
-        res.json({ success: true, report: aiResponse, provider: selectedProvider });
+        res.json({
+            success: true,
+            report: aiResponse,
+            provider: selectedProvider,
+            matricula_variations: generateMatriculaVariations(matricula)
+        });
 
     } catch (error) {
-        const upstreamError = error.response?.data?.error || error.response?.data || error.message;
-        console.error('[OSINT ERROR FULL]', JSON.stringify(upstreamError, null, 2));
+        console.error('[OSINT ERROR FULL]', error.response?.data || error.message);
+
+        // Handle specific error cases
+        if (error.response?.data?.error) {
+            const geminiError = error.response.data.error;
+
+            if (geminiError.message?.includes('API key expired') || geminiError.message?.includes('API_KEY_INVALID')) {
+                return res.status(401).json({
+                    error: '🔑 CHAVE GEMINI EXPIRADA OU INVÁLIDA',
+                    details: 'A chave configurada no Railway não é válida. Gere uma nova em: https://aistudio.google.com/app/apikey e atualize a variável GEMINI_API_KEY no Railway.'
+                });
+            }
+
+            return res.status(500).json({
+                error: 'Erro do provedor de IA',
+                details: geminiError.message || JSON.stringify(geminiError)
+            });
+        }
 
         res.status(500).json({
-            error: 'Erro na busca OSINT.',
-            details: JSON.stringify(upstreamError)
+            error: 'Erro na busca OSINT',
+            details: error.message || 'Erro desconhecido'
         });
     }
 });
