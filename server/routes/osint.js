@@ -164,10 +164,12 @@ router.post('/search', async (req, res) => {
         res.json({ success: true, report: aiResponse, provider: selectedProvider });
 
     } catch (error) {
-        console.error('[OSINT ERROR]', error.response?.data || error.message);
+        const upstreamError = error.response?.data?.error || error.response?.data || error.message;
+        console.error('[OSINT ERROR FULL]', JSON.stringify(upstreamError, null, 2));
+
         res.status(500).json({
             error: 'Erro na busca OSINT.',
-            details: error.message || 'Erro desconhecido'
+            details: JSON.stringify(upstreamError)
         });
     }
 });

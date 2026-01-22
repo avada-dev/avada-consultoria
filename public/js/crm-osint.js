@@ -184,7 +184,8 @@ async function handleOSINTSearch(e) {
         loadOSINTHistory();
 
     } catch (error) {
-        alert('Erro na busca: ' + error.message);
+        console.error('Frontend OSINT Error:', error);
+        alert('Erro detalhado: ' + (error.details || error.message || error));
     } finally {
         btn.disabled = false;
         loading.style.display = 'none';
