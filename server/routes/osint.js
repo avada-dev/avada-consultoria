@@ -5,9 +5,9 @@ const db = require('../database');
 
 // Environment Variables for Keys
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
-const SERPAPI_KEY = process.env.SERPAPI_KEY;
-const SCRAPERAPI_KEY = process.env.SCRAPERAPI_KEY;
+const TAVILY_API_KEY = process.env.TAVILY_API;
+const SERPAPI_KEY = process.env.SERPAPI;
+const SCRAPERAPI_KEY = process.env.SCRAPER_API;
 
 // Middleware to check auth
 const authenticateToken = (req, res, next) => {
@@ -48,20 +48,18 @@ router.get('/diagnostic', (req, res) => {
 // GET History
 router.get('/history', (req, res) => {
     db.all('SELECT * FROM osint_searches WHERE user_id = ? ORDER BY created_at DESC', [req.user.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        if (err) return res.status(500).json({ error: 'Erro ao carregar histórico' });
+        res.json(rows || []);
     });
 });
 
-// Helper: Generate matricula variations
+// Helper: Variations of matricula formats
 function generateMatriculaVariations(matricula) {
-    const clean = matricula.replace(/[-\s]/g, '');
+    const clean = matricula.replace(/[^\d]/g, '');
     const variations = new Set([
-        matricula.trim(),
+        matricula,
         clean,
-        // Try common patterns
-        clean.replace(/(\d{6})(\d)/, '$1-$2'),
-        clean.replace(/(\d{3})(\d{3})(\d)/, '$1.$2-$3'),
+        clean.replace(/(\ d{6})(\d)/, '$1-$2'),
         clean.replace(/(\d{3})(\d{3})(\d)/, '$1-$2-$3'),
     ]);
     return Array.from(variations).filter(v => v.length > 0);
@@ -72,51 +70,51 @@ function buildServiderPublicoPrompt(matricula, city, state, target_name) {
     const variations = generateMatriculaVariations(matricula);
 
     return `
-Você é um especialista em OSINT para auditoria pública brasileira.
+Você é um analista OSINT especializado em auditoria pública brasileira.
 
-MISSÃO CRÍTICA: Buscar informações EXCLUSIVAMENTE sobre o servidor público identificado pela matrícula "${matricula}".
+**MISSÃO**: Localizar informações PÚBLICAS sobre servidor com matrícula **${matricula}** em **${city} - ${state}**.
 
-DADOS DO ALVO:
+**DADOS DO ALVO**:
 - Matrícula: ${matricula} (variações: ${variations.join(', ')})
 - Nome: ${target_name || 'não informado'}
-- Local de atuação: ${city} - ${state}
+- Local: ${city} - ${state}
 
-INSTRUÇÕES OBRIGATÓRIAS:
-1. Use Google Search para buscar APENAS esta matrícula específica
-2. Busque em fontes oficiais: Portal da Transparência, Diários Oficiais (.gov.br), TCE/TCM
-3. Combine matrícula + cidade + estado nas buscas
-4. Se NÃO encontrar dados desta matrícula, retorne "Nenhum dado encontrado para esta matrícula"
-5. NÃO invente dados. Use APENAS informações verificáveis nas fontes
-6. Inclua SEMPRE os links das fontes consultadas
-
-FORMATO DA RESPOSTA (Markdown estrito):
-
-# Servidor Público - Matrícula ${matricula}
-
-## ✅ Status da Busca
-[Encontrado / Nenhum dado encontrado]
-
-## 1. Identificação Confirmada
-- **Nome Completo**: 
-- **Cargo/Função**: 
-- **Órgão/Secretaria**: 
-- **Matrícula**: ${matricula}
-
-## 2. Vínculos e Remuneração
-[Dados do Portal da Transparência - salário, gratificações, etc]
-
-## 3. Publicações em Diários Oficiais
-[Lista de menções em DOs com datas e descrição]
-
-## 4. Processos e Pendências
-[Se houver processos administrativos ou judiciais]
-
-## 5. Fontes Consultadas
-- [Link 1]
-- [Link 2]
+**REGRAS ESTRITAS**:
+1. Busque APENAS esta matrícula específica
+2. Fontes válidas: portaldatransparencia.gov.br, diários oficiais (.gov.br), TCE/TCM
+3. Se NÃO encontrar, retorne "Nenhum dado verificável encontrado"
+4. NÃO invente dados
+5. **CRÍTICO**: Cite URLs .gov.br REAIS. NUNCA links "vertexaisearch" (redirect inútil). Se não tiver URL real, escreva "Fontes: Múltiplos diários oficiais consultados via busca"
+6. Se achar em OUTRO local, alerte no relatório
 
 ---
-**Importante**: Todos os dados acima são públicos e verificáveis nas fontes listadas.
+
+# Relatório - Matrícula ${matricula}
+
+## STATUS
+✅ **[ENCONTRADO / NÃO ENCONTRADO / DADOS PARCIAIS]**
+
+## 1. IDENTIFICAÇÃO
+- **Nome**: [Nome completo OU "Não identificado"]
+- **Cargo**: [Cargo OU "Não identificado"]  
+- **Órgão**: [Órgão OU "Não identificado"]
+- **Local Confirmado**: [${city}/${state} OU outro local]
+
+## 2. REMUNERAÇÃO
+- **Salário Base**: [R$ X,XX OU "Não disponível"]
+- **Total Bruto**: [R$ X,XX OU "Não disponível"]
+
+## 3. DIÁRIOS OFICIAIS
+[Lista com datas OU "Nenhuma publicação localizada"]
+
+## 4. ALERTAS
+[Inconsistências, ex: "Matrícula localizada no DF, não em SP conforme busca"]
+
+## 5. FONTES
+[URLs DIRETOS de portais .gov.br - NÃO inclua links redirect "vertexaisearch"]
+
+---
+*Dados públicos - Valide nas fontes acima*
 `.trim();
 }
 
@@ -151,7 +149,7 @@ router.post('/search', async (req, res) => {
     try {
         const prompt = buildServiderPublicoPrompt(matricula, city, state, target_name);
 
-        // --- STRATEGY 1: NATIVE GOOGLE GROUNDING (RECOMMENDED) ---
+        // --- STRATEGY 1: GOOGLE GROUNDING (NATIVE) ---
         if (selectedProvider === 'google_grounding') {
             const requestBody = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -174,82 +172,23 @@ router.post('/search', async (req, res) => {
             // --- STRATEGY 2: TAVILY API ---
         } else if (selectedProvider === 'tavily') {
             if (!TAVILY_API_KEY) {
-                return res.status(400).json({
-                    error: 'Chave Tavily não configurada',
-                    details: 'Defina TAVILY_API_KEY no Railway para usar este provedor'
-                });
+                return res.status(500).json({ error: 'Tavily API Key não configurada no Railway (TAVILY_API)' });
             }
 
-            const variations = generateMatriculaVariations(matricula);
-            const query = `servidor público matrícula (${variations.join(' OR ')}) ${city} ${state} site:.gov.br`;
-
-            const tavilyResponse = await axios.post('https://api.tavily.com/search', {
-                api_key: TAVILY_API_KEY,
-                query: query,
-                search_depth: "advanced",
-                include_answer: true,
-                max_results: 10
-            });
-
-            searchContext = formatContext(tavilyResponse.data, 'Tavily');
-
-            // --- STRATEGY 3: SERPAPI ---
-        } else if (selectedProvider === 'serpapi') {
-            if (!SERPAPI_KEY) {
-                return res.status(400).json({
-                    error: 'Chave SerpApi não configurada',
-                    details: 'Defina SERPAPI_KEY no Railway para usar este provedor'
-                });
-            }
-
-            const variations = generateMatriculaVariations(matricula);
-            const query = `(${variations.join(' OR ')}) servidor ${city} ${state} site:.gov.br`;
-
-            const serpResponse = await axios.get(`https://serpapi.com/search`, {
-                params: {
-                    api_key: SERPAPI_KEY,
-                    q: query,
-                    location: "Brazil",
-                    hl: "pt-br",
-                    gl: "br",
-                    num: 20
-                }
-            });
-
-            searchContext = formatContext(serpResponse.data.organic_results, 'SerpApi');
-
-            // --- STRATEGY 4: SCRAPERAPI ---
-        } else if (selectedProvider === 'scraperapi') {
-            if (!SCRAPERAPI_KEY) {
-                return res.status(400).json({
-                    error: 'Chave ScraperApi não configurada',
-                    details: 'Defina SCRAPERAPI_KEY no Railway para usar este provedor'
-                });
-            }
-
-            const variations = generateMatriculaVariations(matricula);
-            const searchQuery = `servidor ${matricula} ${city} ${state}`;
-            const targetUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-
-            const scraperResponse = await axios.get(`http://api.scraperapi.com`, {
-                params: {
-                    api_key: SCRAPERAPI_KEY,
-                    url: targetUrl
+            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} site:gov.br`;
+            const tavilyResponse = await axios.post(
+                'https://api.tavily.com/search',
+                {
+                    api_key: TAVILY_API_KEY,
+                    query: searchQuery,
+                    search_depth: 'advanced',
+                    include_answer: true,
+                    max_results: 10
                 },
-                timeout: 30000
-            });
+                { timeout: 30000 }
+            );
 
-            searchContext = `HTML da busca Google capturado. Tamanho: ${scraperResponse.data.length} caracteres`;
-        }
-
-        // --- GEMINI ANALYSIS (for external providers) ---
-        if (selectedProvider !== 'google_grounding') {
-            if (!searchContext) {
-                return res.status(500).json({
-                    error: 'Nenhum dado retornado pelo provedor',
-                    details: `${selectedProvider} não retornou resultados`
-                });
-            }
+            searchContext = formatContext(tavilyResponse.data, 'Tavily API');
 
             const analysisPrompt = `${prompt}\n\nDADOS BRUTOS COLETADOS:\n${searchContext}\n\nAnalise os dados acima e gere o relatório no formato solicitado.`;
 
@@ -263,54 +202,126 @@ router.post('/search', async (req, res) => {
             );
 
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            // --- STRATEGY 3: SERPAPI ---
+        } else if (selectedProvider === 'serpapi') {
+            if (!SERPAPI_KEY) {
+                return res.status(500).json({ error: 'SerpApi Key não configurada no Railway (SERPAPI)' });
+            }
+
+            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state}`;
+            const serpApiResponse = await axios.get('https://serpapi.com/search', {
+                params: {
+                    api_key: SERPAPI_KEY,
+                    q: searchQuery,
+                    engine: 'google',
+                    gl: 'br',
+                    hl: 'pt',
+                    num: 20
+                },
+                timeout: 30000
+            });
+
+            searchContext = formatContext(serpApiResponse.data.organic_results, 'SerpApi');
+
+            const analysisPrompt = `${prompt}\n\nDADOS BRUTOS COLETADOS:\n${searchContext}\n\nAnalise os dados acima e gere o relatório no formato solicitado.`;
+
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: analysisPrompt }] }] },
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                }
+            );
+
+            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            // --- STRATEGY 4: SCRAPERAPI ---
+        } else if (selectedProvider === 'scraperapi') {
+            if (!SCRAPERAPI_KEY) {
+                return res.status(500).json({ error: 'ScraperApi Key não configurada no Railway (SCRAPER_API)' });
+            }
+
+            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state}`;
+            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+
+            const scraperResponse = await axios.get('https://api.scraperapi.com', {
+                params: {
+                    api_key: SCRAPERAPI_KEY,
+                    url: googleSearchUrl,
+                    country_code: 'br'
+                },
+                timeout: 45000
+            });
+
+            searchContext = `Scraped HTML Preview:\n${scraperResponse.data.substring(0, 15000)}`;
+
+            const analysisPrompt = `${prompt}\n\nDADOS BRUTOS COLETADOS:\n${searchContext}\n\nAnalise os dados acima e gere o relatório no formato solicitado.`;
+
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: analysisPrompt }] }] },
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                }
+            );
+
+            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        } else {
+            return res.status(400).json({ error: 'Provedor inválido. Use: google_grounding, tavily, serpapi ou scraperapi' });
         }
 
         if (!aiResponse) {
-            return res.status(500).json({
-                error: 'IA não retornou resposta',
-                details: 'Gemini não gerou texto. Possível bloqueio de segurança ou timeout.'
-            });
+            throw new Error('Resposta vazia da AI');
         }
 
-        // Save to DB
+        // Save Search to DB
+        const searchData = {
+            target_name: target_name || 'N/A',
+            target_id: matricula,
+            city,
+            state,
+            notes: `Busca via ${selectedProvider}`,
+            report_content: aiResponse
+        };
+
         db.run(
-            `INSERT INTO osint_searches (user_id, target_name, target_id, city, state, report_content) VALUES (?, ?, ?, ?, ?, ?)`,
-            [req.user.id, target_name || 'Servidor Público', matricula, city, state, aiResponse],
+            'INSERT INTO osint_searches (user_id, target_name, target_id, city, state, notes, report_content) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [req.user.id, searchData.target_name, searchData.target_id, searchData.city, searchData.state, searchData.notes, searchData.report_content],
             function (err) {
-                if (err) console.error("[OSINT] Erro ao salvar histórico:", err);
+                if (err) {
+                    console.error('[OSINT] Erro ao salvar em DB:', err);
+                }
             }
         );
 
-        res.json({
-            success: true,
-            report: aiResponse,
-            provider: selectedProvider,
-            matricula_variations: generateMatriculaVariations(matricula)
-        });
+        res.json({ report: aiResponse });
 
     } catch (error) {
-        console.error('[OSINT ERROR FULL]', error.response?.data || error.message);
+        console.error('[OSINT] Erro completo:', error.response?.data || error.message);
 
-        // Handle specific error cases
-        if (error.response?.data?.error) {
-            const geminiError = error.response.data.error;
-
-            if (geminiError.message?.includes('API key expired') || geminiError.message?.includes('API_KEY_INVALID')) {
-                return res.status(401).json({
-                    error: '🔑 CHAVE GEMINI EXPIRADA OU INVÁLIDA',
-                    details: 'A chave configurada no Railway não é válida. Gere uma nova em: https://aistudio.google.com/app/apikey e atualize a variável GEMINI_API_KEY no Railway.'
+        // Enhanced error messages
+        if (error.response?.data?.error?.message) {
+            const upstreamError = error.response.data.error.message;
+            if (upstreamError.includes('API key')) {
+                return res.status(500).json({
+                    error: 'Chave API Gemini Inválida ou Expirada',
+                    details: upstreamError,
+                    action: 'Verifique se a chave GEMINI_API_KEY no Railway está correta e ativa'
                 });
             }
-
             return res.status(500).json({
-                error: 'Erro do provedor de IA',
-                details: geminiError.message || JSON.stringify(geminiError)
+                error: 'Erro ao processar busca OSINT',
+                details: upstreamError
             });
         }
 
         res.status(500).json({
-            error: 'Erro na busca OSINT',
-            details: error.message || 'Erro desconhecido'
+            error: 'Erro ao processar busca OSINT',
+            details: error.message
         });
     }
 });

@@ -9,14 +9,14 @@ async function loadOSINTView() {
             <div class="info-card mb-4" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                 <h3 style="color: #2d3748; margin-bottom: 15px;"><i class="fas fa-search-location" style="color: #667eea;"></i> Investigação de Servidor Público</h3>
                 <p class="text-gray-600 mb-4">
-                    Utilize esta ferramenta para buscar informações públicas (Portal da Transparência, Diários Oficiais) utilizando a Inteligência Artificial do Gemini 2.5 Flash.
+                    Utilize esta ferramenta para buscar informações públicas (Portal da Transparência, Diários Oficiais) utilizando Inteligência Artificial.
                 </p>
                 
                 <form id="osint-form" onsubmit="handleOSINTSearch(event)">
                     <div class="form-group mb-4">
                         <label class="form-label">Provedor de Busca *</label>
                         <select id="osint-provider" class="form-input" required>
-                            <option value="google_grounding">Google Grounding (Nativo do Gemini 2.5) - Recomendado</option>
+                            <option value="google_grounding">Google Grounding (Busca Nativa) - Recomendado</option>
                             <option value="tavily">Tavily API (Busca Otimizada para IA)</option>
                             <option value="serpapi">SerpApi (Google Search API)</option>
                             <option value="scraperapi">ScraperApi (Web Scraping)</option>
