@@ -86,11 +86,13 @@ async function loadOSINTView() {
 
             <!-- Loading State -->
             <div id="osint-loading" style="display: none; text-align: center; padding: 40px;">
-                <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
-                <h3 style="color: #4a5568;">A IA está varrendo a web...</h3>
-                <p class="text-gray-500">Isso pode levar de 10 a 30 segundos.</p>
+                <div class="flex flex-col items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                    <p class="text-gray-600 font-medium">Buscando informações na web...</p>
+                    <p class="text-xs text-gray-400 mt-2">Isso pode levar de 10 a 30 segundos.</p>
+                </div>
             </div>
-
+            
             <!-- Result Card -->
             <div id="osint-result" class="info-card" style="display: none; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #48bb78;">
                 <h3 style="color: #2d3748; margin-bottom: 15px;">
