@@ -204,12 +204,12 @@ router.post('/search', async (req, res) => {
             const serpApiResponse = await axios.get('https://serpapi.com/search', {
                 params: {
                     api_key: keys.SERPAPI,
-                    q: searchQuery,
+                    q: searchQuery, // Query exata "Matricula X"
                     engine: 'google',
                     gl: 'br',
                     hl: 'pt',
-                    location: `${city}, State of ${state}, Brazil`, // Tenta geolocalizar a busca
-                    num: 20
+                    // location removido para evitar erro 400 e restrições
+                    num: 40 // Aumentado para ter mais chances de encontrar os prioritários
                 },
                 timeout: 45000
             });
@@ -222,8 +222,9 @@ router.post('/search', async (req, res) => {
                 return res.status(500).json({ error: 'Chave API ScraperApi não encontrada.' });
             }
 
-            const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery + " " + city + " " + state)}`;
+            const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`; // Query exata
             console.log('[OSINT] Consultando ScraperApi:', googleUrl);
+
 
             const scraperResponse = await axios.get('https://api.scraperapi.com', {
                 params: {
@@ -251,8 +252,50 @@ router.post('/search', async (req, res) => {
 
     } catch (error) {
         console.error('[OSINT] Erro:', error.message);
+        if (error.response) {
+            console.error('[OSINT] Detalhes do Erro (Response):', JSON.stringify(error.response.data, null, 2));
+        }
         res.status(500).json({ error: 'Erro ao executar busca', details: error.message });
     }
 });
+
+// Helper de Normalização
+function normalizeStr(str) {
+    return str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+}
+
+// Função de Ordenação por Relevância e Prioridade
+function sortItemsByRelevance(items, city, state) {
+    const priorityTerms = [
+        "sd pm", "pm", "policia militar", "guarda municipal", "policia municipal",
+        "guarda civil", "oficial pm", "sargento", "cabo pm", "tenente",
+        "promocoes de soldados pm", "soldado", "agente de transito",
+        "agente da autoridade de transito", "detran", "demutran", "cet",
+        "transito", "prefeitura", "secretaria"
+    ];
+
+    return items.sort((a, b) => {
+        const textA = normalizeStr((a.title || "") + " " + (a.snippet || ""));
+        const textB = normalizeStr((b.title || "") + " " + (b.snippet || ""));
+
+        const cityNorm = normalizeStr(city);
+
+        // 1. Prioridade Absoluta: Termos Militares/Trânsito
+        const hasPriorityA = priorityTerms.some(term => textA.includes(term));
+        const hasPriorityB = priorityTerms.some(term => textB.includes(term));
+
+        if (hasPriorityA && !hasPriorityB) return -1;
+        if (!hasPriorityA && hasPriorityB) return 1;
+
+        // 2. Relevância Geográfica (Cidade)
+        const hasCityA = cityNorm && textA.includes(cityNorm);
+        const hasCityB = cityNorm && textB.includes(cityNorm);
+
+        if (hasCityA && !hasCityB) return -1;
+        if (!hasCityA && hasCityB) return 1;
+
+        return 0;
+    });
+}
 
 module.exports = router;
