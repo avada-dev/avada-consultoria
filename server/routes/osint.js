@@ -3,11 +3,13 @@ const router = express.Router();
 const axios = require('axios');
 const db = require('../database');
 
-// Environment Variables for Keys
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const TAVILY_API_KEY = process.env.TAVILY_API;
-const SERPAPI_KEY = process.env.SERPAPI;
-const SCRAPERAPI_KEY = process.env.SCRAPER_API;
+// Environment Variables - RECARREGANDO SEMPRE
+const getApiKeys = () => ({
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    TAVILY_API_KEY: process.env.TAVILY_API,
+    SERPAPI_KEY: process.env.SERPAPI,
+    SCRAPERAPI_KEY: process.env.SCRAPER_API
+});
 
 // Middleware to check auth
 const authenticateToken = (req, res, next) => {
@@ -25,22 +27,39 @@ const authenticateToken = (req, res, next) => {
 
 router.use(authenticateToken);
 
-// DIAGNOSTIC ENDPOINT
+// DIAGNOSTIC ENDPOINT - ULTRA COMPLETO
 router.get('/diagnostic', (req, res) => {
-    const keyExists = !!GEMINI_API_KEY;
-    const keyPreview = GEMINI_API_KEY
-        ? `${GEMINI_API_KEY.substring(0, 10)}...${GEMINI_API_KEY.substring(GEMINI_API_KEY.length - 5)}`
-        : 'NOT SET';
+    const keys = getApiKeys();
+
+    const allEnvKeys = Object.keys(process.env).filter(k =>
+        k.includes('API') || k.includes('KEY') || k.includes('SERP') || k.includes('TAVILY') || k.includes('SCRAPER') || k.includes('GEMINI')
+    );
+
+    const envSnapshot = {};
+    allEnvKeys.forEach(key => {
+        const val = process.env[key];
+        if (val) {
+            envSnapshot[key] = `${val.substring(0, 15)}...${val.substring(val.length - 8)} (length: ${val.length})`;
+        } else {
+            envSnapshot[key] = 'NOT SET или VAZIO';
+        }
+    });
 
     res.json({
-        gemini_key_configured: keyExists,
-        gemini_key_preview: keyPreview,
-        tavily_configured: !!TAVILY_API_KEY,
-        serpapi_configured: !!SERPAPI_KEY,
-        scraperapi_configured: !!SCRAPERAPI_KEY,
-        env_check: {
-            NODE_ENV: process.env.NODE_ENV,
-            has_process_env: typeof process.env === 'object'
+        TODAS_ENV_VARS_DISPONIVEIS: allEnvKeys,
+        VALORES_ATUAIS: envSnapshot,
+        ESPERADO_PELO_CODIGO: {
+            'process.env.GEMINI_API_KEY': !!keys.GEMINI_API_KEY ? 'CONFIGURADO' : 'VAZIO',
+            'process.env.TAVILY_API': !!keys.TAVILY_API_KEY ? 'CONFIGURADO' : 'VAZIO',
+            'process.env.SERPAPI': !!keys.SERPAPI_KEY ? 'CONFIGURADO' : 'VAZIO',
+            'process.env.SCRAPER_API': !!keys.SCRAPERAPI_KEY ? 'CONFIGURADO' : 'VAZIO'
+        },
+        INSTRUCOES_RAILWAY: 'Configure as variáveis: GEMINI_API_KEY, TAVILY_API, SERPAPI, SCRAPER_API (EXATAMENTE assim)',
+        TESTE_LEITURA: {
+            GEMINI_API_KEY: keys.GEMINI_API_KEY || 'VAZIO',
+            TAVILY_API: keys.TAVILY_API_KEY || 'VAZIO',
+            SERPAPI: keys.SERPAPI_KEY || 'VAZIO',
+            SCRAPER_API: keys.SCRAPERAPI_KEY || 'VAZIO'
         }
     });
 });
@@ -61,87 +80,99 @@ function generateMatriculaVariations(matricula) {
         clean,
         clean.replace(/(\d{6})(\d)/, '$1-$2'),
         clean.replace(/(\d{3})(\d{3})(\d)/, '$1-$2-$3'),
+        clean.replace(/(\d{3})(\d{3})(\d)/, '$1.$2-$3'),
     ]);
     return Array.from(variations).filter(v => v.length > 0);
 }
 
-// Helper: Build prompt specialized for traffic authorities
+// Helper: Build prompt SEM VEDAÇÃO RESTRITIVA
 function buildServiderPublicoPrompt(matricula, city, state, target_name) {
     const variations = generateMatriculaVariations(matricula);
 
     return `
-Você é um especialista em buscar servidores públicos de órgãos de trânsito.
+Você é um especialista em OSINT para buscar servidores públicos brasileiros na internet.
 
-**BUSCA ESPECIALIZADA**: Matrícula **${matricula}** em **${city} - ${state}** vinculada a **ÓRGÃOS DE TRÂNSITO**.
+**OBJETIVO**: Localizar **QUALQUER informação** sobre a matrícula **${matricula}**.
 
-**DADOS**:
-- Matrícula: ${matricula} (variações: ${variations.join(', ')})
+**DADOS DA BUSCA**:
+- Matrícula procurada: ${matricula} (variações: ${variations.join(', ')})
 - Nome: ${target_name || 'não informado'}
-- **LOCAL OBRIGATÓRIO**: ${city}/${state}
-- **FOCO**: Agente de Trânsito, Autoridade de Trânsito, DETRAN, CIRETRAN, Diretor de Trânsito
+- Localização de interesse: ${city}/${state}
 
-**⛔ VEDAÇÃO GEOGRÁFICA (REGRA CRÍTICA)**:
-1. **IGNORE TOTALMENTE** resultados de outras cidades ou estados
-2. Se a matrícula existir em ${city}/${state} E em outros locais, retorne SOMENTE ${city}/${state}
-3. Se existir APENAS em outros locais, retorne: "❌ Nenhum documento encontrado para ${city}/${state}"
-4. **PROIBIDO** mencionar dados de outros locais em qualquer seção
+**FONTES ACEITAS** (BUSCAR EM TODAS):
+- Diários Oficiais (municipal, estadual, federal)
+- Portais de Transparência
+- Sites de notícias e jornais locais
+- Blogs e sites pessoais
+- Redes sociais públicas
+- Escavador, Jusbrasil, portais jurídicos
+- Sites de prefeituras e governos
+- Qualquer site público na internet
 
-**INSTRUÇÕES**:
-1. **PRIORIZE** publicações relacionadas a órgãos de trânsito:
-   - DETRAN (Departamento Estadual de Trânsito)
-   - CIRETRAN (Circunscrição Regional de Trânsito)
-   - Agente de Trânsito / Autoridade de Trânsito
-   - Diretor de Órgão de Trânsito
-   - Publicações sobre nomeações, exonerações, portarias em órgãos de trânsito
-2. Busque em Diários Oficiais, portais .gov.br, PDFs públicos
-3. Para CADA documento de ${city}/${state}, extraia:
+**INSTRUÇÕES CRÍTICAS**:
+1. **MOSTRE TODOS os resultados** que encontrar com a matrícula ${matricula}
+2. **NÃO descarte** resultados só porque são de outro estado/cidade
+3. Para CADA documento encontrado, extraia:
    - Título/ID do documento
-   - Trecho literal (máx 120 chars) com a matrícula
+   - Trecho literal (máx 150 chars) com a matrícula
    - Matrícula identificada
-   - Cidade (confirme ${city})
-   - Estado (confirme ${state})
-   - URL direto (.gov.br, scribd.com - NUNCA "vertexaisearch")
-4. Se zero resultados: "❌ Nenhum documento encontrado"
-5. NÃO invente dados
+   - Cidade mencionada
+   - Estado mencionado
+   - URL DIRETO (nunca "vertexaisearch")
+4. Priorize resultados de ${city}/${state}, mas mostre TODOS.
+5. Se não encontrar NADA: "❌ Nenhuma informação encontrada"
+6. NÃO invente dados.
 
 **FORMATO DE SAÍDA**:
 
-✅ **Resultado 1**: [ID/Título] | [Tipo] | [Órgão de Trânsito]
-**Documento**: "[Trecho literal...]"
-✅ **Matrícula**: [número]
-✅ **Cidade**: ${city}
-✅ **Estado**: ${state}
+✅ **Resultado 1**: [Título/Fonte]
+**Tipo**: [Diário Oficial / Portal / Blog / etc]
+**Trecho**: "[...texto literal...]"
+**Matrícula**: [número]
+**Local**: [Cidade - Estado]
 **Link**: [URL direto]
 
-✅ **Resultado 2**: [ID] | [Tipo] | [Órgão]
-**Documento**: "[Trecho...]"
-✅ **Matrícula**: [número]
-✅ **Cidade**: ${city}
-✅ **Estado**: ${state}
+✅ **Resultado 2**: [Título]
+**Tipo**: [tipo]
+**Trecho**: "[...]"
+**Matrícula**: [número]
+**Local**: [Local]
 **Link**: [URL]
 
-[Continue para todos de ${city}/${state}]
+[Continue para TODOS os resultados]
 
 ---
-**Total**: [X documentos em ${city}/${state}]
+**RESUMO**: [X documentos encontrados]
 `.trim();
 }
 
 // Helper: Format Context
 function formatContext(results, provider) {
     if (!results) return "Nenhum resultado encontrado.";
-    return `Resultados de ${provider}:\n\n${JSON.stringify(results, null, 2).substring(0, 30000)}`;
+    return `Resultados de ${provider}:\n\n${JSON.stringify(results, null, 2).substring(0, 40000)}`;
 }
 
 // POST Search
 router.post('/search', async (req, res) => {
     const { matricula, city, state, target_name, provider } = req.body;
 
+    // RECARREGAR ENV VARS
+    const keys = getApiKeys();
+
+    console.log('[OSINT] POST /search recebido');
+    console.log('[OSINT] Body:', { matricula, city, state, target_name, provider });
+    console.log('[OSINT] ENV Check:', {
+        GEMINI: !!keys.GEMINI_API_KEY,
+        TAVILY: !!keys.TAVILY_API_KEY,
+        SERPAPI: !!keys.SERPAPI_KEY,
+        SCRAPER: !!keys.SCRAPERAPI_KEY
+    });
+
     if (!matricula || !city || !state) {
         return res.status(400).json({ error: 'Dados insuficientes. Informe Matrícula, Cidade e Estado.' });
     }
 
-    if (!GEMINI_API_KEY) {
+    if (!keys.GEMINI_API_KEY) {
         return res.status(500).json({
             error: 'Chave Gemini não configurada',
             details: 'GEMINI_API_KEY não definida no Railway'
@@ -158,7 +189,7 @@ router.post('/search', async (req, res) => {
         });
     }
 
-    console.log(`[OSINT] Busca via ${selectedProvider}: ${matricula} em ${city}/${state}`);
+    console.log(`[OSINT] Provider selecionado: "${selectedProvider}"`);
 
     let aiResponse = "";
     let searchContext = "";
@@ -168,95 +199,129 @@ router.post('/search', async (req, res) => {
 
         // --- TAVILY API ---
         if (selectedProvider === 'tavily') {
-            if (!TAVILY_API_KEY) {
-                return res.status(500).json({ error: 'Tavily API Key não configurada (TAVILY_API)' });
+            console.log('[OSINT] Tentando TAVILY...');
+            if (!keys.TAVILY_API_KEY) {
+                console.error('[OSINT] TAVILY_API_KEY está vazia!');
+                return res.status(500).json({
+                    error: 'Tavily API Key não configurada (TAVILY_API)',
+                    instrucao: 'Configure a variável TAVILY_API no Railway',
+                    env_check: Object.keys(process.env).filter(k => k.includes('TAVILY'))
+                });
             }
 
-            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} "agente de trânsito" OR "autoridade de trânsito" OR "DETRAN" OR "órgão de trânsito" OR "diretor de trânsito" site:gov.br`;
+            // BUSCA AMPLA: Sem site:gov.br ou outras restrições
+            const searchQuery = `${matricula} "${city}" "${state}" servidor público OR funcionário OR matrícula`;
+            console.log('[OSINT] Query Tavily (AMPLA):', searchQuery);
+
             const tavilyResponse = await axios.post(
                 'https://api.tavily.com/search',
                 {
-                    api_key: TAVILY_API_KEY,
+                    api_key: keys.TAVILY_API_KEY,
                     query: searchQuery,
                     search_depth: 'advanced',
                     include_answer: true,
-                    max_results: 10
+                    max_results: 20,
+                    include_domains: [],
+                    exclude_domains: []
                 },
-                { timeout: 30000 }
+                { timeout: 45000 }
             );
 
+            console.log('[OSINT] Tavily response received');
             searchContext = formatContext(tavilyResponse.data, 'Tavily API');
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório no formato solicitado. VEDAÇÃO TOTAL para resultados fora de ${city}/${state}.`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório COMPLETO.`;
 
             const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keys.GEMINI_API_KEY}`,
                 { contents: [{ parts: [{ text: analysisPrompt }] }] },
-                { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+                { headers: { 'Content-Type': 'application/json' }, timeout: 90000 }
             );
 
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log('[OSINT] Gemini analysis complete');
 
             // --- SERPAPI ---
         } else if (selectedProvider === 'serpapi') {
-            if (!SERPAPI_KEY) {
-                return res.status(500).json({ error: 'SerpApi Key não configurada (SERPAPI)' });
+            console.log('[OSINT] Tentando SERPAPI...');
+            if (!keys.SERPAPI_KEY) {
+                console.error('[OSINT] SERPAPI_KEY está vazia!');
+                return res.status(500).json({
+                    error: 'SerpApi Key não configurada (SERPAPI)',
+                    instrucao: 'Configure a variável SERPAPI no Railway',
+                    env_check: Object.keys(process.env).filter(k => k.includes('SERP'))
+                });
             }
 
-            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} "agente de trânsito" OR "DETRAN" OR "autoridade de trânsito"`;
+            // BUSCA AMPLA
+            const searchQuery = `${matricula} ${city} ${state} servidor público`;
+            console.log('[OSINT] Query SerpApi (AMPLA):', searchQuery);
+
             const serpApiResponse = await axios.get('https://serpapi.com/search', {
                 params: {
-                    api_key: SERPAPI_KEY,
+                    api_key: keys.SERPAPI_KEY,
                     q: searchQuery,
                     engine: 'google',
                     gl: 'br',
                     hl: 'pt',
-                    num: 20
-                },
-                timeout: 30000
-            });
-
-            searchContext = formatContext(serpApiResponse.data.organic_results, 'SerpApi');
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório. VEDAÇÃO: somente ${city}/${state}.`;
-
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                { contents: [{ parts: [{ text: analysisPrompt }] }] },
-                { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
-            );
-
-            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            // --- SCRAPERAPI ---
-        } else if (selectedProvider === 'scraperapi') {
-            if (!SCRAPERAPI_KEY) {
-                return res.status(500).json({ error: 'ScraperApi Key não configurada (SCRAPER_API)' });
-            }
-
-            const searchQuery = `servidor público matrícula ${matricula} ${city} ${state} "agente de trânsito" OR "DETRAN"`;
-            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-
-            const scraperResponse = await axios.get('https://api.scraperapi.com', {
-                params: {
-                    api_key: SCRAPERAPI_KEY,
-                    url: googleSearchUrl,
-                    country_code: 'br'
+                    num: 40 // Mais resultados
                 },
                 timeout: 45000
             });
 
-            searchContext = `Scraped HTML:\n${scraperResponse.data.substring(0, 15000)}`;
-            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório. VEDAÇÃO: ${city}/${state} apenas.`;
+            console.log('[OSINT] SerpApi response received');
+            searchContext = formatContext(serpApiResponse.data.organic_results, 'SerpApi');
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório COMPLETO.`;
 
             const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keys.GEMINI_API_KEY}`,
                 { contents: [{ parts: [{ text: analysisPrompt }] }] },
-                { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+                { headers: { 'Content-Type': 'application/json' }, timeout: 90000 }
             );
 
             aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log('[OSINT] Gemini analysis complete');
+
+            // --- SCRAPERAPI ---
+        } else if (selectedProvider === 'scraperapi') {
+            console.log('[OSINT] Tentando SCRAPERAPI...');
+            if (!keys.SCRAPERAPI_KEY) {
+                console.error('[OSINT] SCRAPERAPI_KEY está vazia!');
+                return res.status(500).json({
+                    error: 'ScraperApi Key não configurada (SCRAPER_API)',
+                    instrucao: 'Configure a variável SCRAPER_API no Railway',
+                    env_check: Object.keys(process.env).filter(k => k.includes('SCRAPER'))
+                });
+            }
+
+            // BUSCA AMPLA
+            const searchQuery = `${matricula} ${city} ${state}`;
+            const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&num=40`;
+            console.log('[OSINT] Query ScraperApi (AMPLA):', googleSearchUrl);
+
+            const scraperResponse = await axios.get('https://api.scraperapi.com', {
+                params: {
+                    api_key: keys.SCRAPERAPI_KEY,
+                    url: googleSearchUrl,
+                    country_code: 'br'
+                },
+                timeout: 60000
+            });
+
+            console.log('[OSINT] ScraperApi response received');
+            searchContext = `Scraped HTML:\n${scraperResponse.data.substring(0, 30000)}`;
+            const analysisPrompt = `${prompt}\n\nDADOS COLETADOS:\n${searchContext}\n\nGere o relatório COMPLETO.`;
+
+            const response = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${keys.GEMINI_API_KEY}`,
+                { contents: [{ parts: [{ text: analysisPrompt }] }] },
+                { headers: { 'Content-Type': 'application/json' }, timeout: 90000 }
+            );
+
+            aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log('[OSINT] Gemini analysis complete');
 
         } else {
-            return res.status(400).json({ error: 'Provedor inválido' });
+            return res.status(400).json({ error: `Provedor inválido: "${selectedProvider}". Use: tavily, serpapi ou scraperapi` });
         }
 
         if (!aiResponse) {
@@ -267,26 +332,23 @@ router.post('/search', async (req, res) => {
         db.run(
             'INSERT INTO osint_searches (user_id, target_name, target_id, city, state, notes, report_content) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [req.user.id, target_name || 'N/A', matricula, city, state, `Busca via ${selectedProvider}`, aiResponse],
-            (err) => { if (err) console.error('[OSINT] Erro DB:', err); }
+            (err) => {
+                if (err) console.error('[OSINT] Erro DB:', err.message);
+            }
         );
 
+        console.log('[OSINT] Success - returning report');
         res.json({ report: aiResponse });
 
     } catch (error) {
-        console.error('[OSINT] Erro:', error.response?.data || error.message);
+        console.error('[OSINT] ERRO COMPLETO:', error.response?.data || error.message);
 
         if (error.response?.data?.error?.message) {
-            const upstreamError = error.response.data.error.message;
-            if (upstreamError.includes('API key')) {
-                return res.status(500).json({
-                    error: 'Chave API Gemini Inválida',
-                    details: upstreamError
-                });
-            }
-            return res.status(500).json({ error: 'Erro OSINT', details: upstreamError });
+            const msg = error.response.data.error.message;
+            return res.status(500).json({ error: 'Erro API Provedor', details: msg, provider: selectedProvider });
         }
 
-        res.status(500).json({ error: 'Erro ao processar busca', details: error.message });
+        res.status(500).json({ error: 'Erro ao processar busca', details: error.message, provider: selectedProvider });
     }
 });
 
