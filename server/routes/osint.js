@@ -6,7 +6,7 @@ const db = require('../database');
 // Environment Variables - Robust Key Check
 const getApiKeys = () => {
     return {
-        // Tenta variações comuns de nomes de variáveis
+        // Tenta ler variaveis padrao e as personalizadas do Railway (baseado no screenshot)
         TAVILY: process.env.TAVILY_API || process.env.TAVILY_API_KEY || process.env.TAVILY_KEY,
         SERPAPI: process.env.SERPAPI || process.env.SERPAPI_KEY || process.env.SERP_API_KEY,
         SCRAPER: process.env.SCRAPER_API || process.env.SCRAPERAPI_KEY || process.env.SCRAPER_KEY
@@ -29,74 +29,83 @@ const authenticateToken = (req, res, next) => {
 
 router.use(authenticateToken);
 
-// DIAGNOSTIC ENDPOINT
+// --- DIAGNOSTIC ENDPOINT (Mantido para debug) ---
 router.get('/diagnostic', (req, res) => {
     const keys = getApiKeys();
-
-    // Debug variables status
-    const debugKeys = {
-        TAVILY: !!keys.TAVILY,
-        SERPAPI: !!keys.SERPAPI,
-        SCRAPER: !!keys.SCRAPER
+    const envStatus = {
+        TAVILY: keys.TAVILY ? 'CONFIGURADA (OK)' : 'VAZIA (ERRO)',
+        SERPAPI: keys.SERPAPI ? 'CONFIGURADA (OK)' : 'VAZIA (ERRO)',
+        SCRAPERAPI: keys.SCRAPER ? 'CONFIGURADA (OK)' : 'VAZIA (ERRO)',
     };
 
+    // Lista segura de vars (sem mostrar conteudo sensivel)
+    const debugVars = Object.keys(process.env)
+        .filter(key => key.includes('API') || key.includes('KEY') || key.includes('SECRET') || key.includes('SERP') || key.includes('TAVILY'))
+        .map(key => `${key}: ${process.env[key] ? '*****' + process.env[key].slice(-4) : 'UNDEFINED'}`);
+
     res.json({
-        STATUS: 'Online',
-        CHAVES_DETECTADAS: debugKeys,
-        VARIAVEIS_AMBIENTE_LIDAS: Object.keys(process.env).filter(k =>
-            k.includes('API') || k.includes('KEY') || k.includes('SERP') || k.includes('TAVILY') || k.includes('SCRAPER')
-        )
+        status: 'OSINT Module Active',
+        keys_status: envStatus,
+        detected_env_vars: debugVars
     });
 });
 
-// GET History
-router.get('/history', (req, res) => {
-    db.all('SELECT * FROM osint_searches WHERE user_id = ? ORDER BY created_at DESC', [req.user.id], (err, rows) => {
-        if (err) return res.status(500).json({ error: 'Erro ao carregar histórico' });
-        res.json(rows || []);
-    });
-});
-
-// --- MANUAL FORMATTING & SORTING (NO FILTERING) ---
+// --- HELPER FUNCTIONS ---
 
 function normalizeStr(str) {
-    if (!str) return '';
-    return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 }
 
-// Ordena resultados: Cidade solicitada no topo
-function sortItemsByRelevance(items, city, state) {
-    const normCity = normalizeStr(city);
-    const normState = normalizeStr(state);
+// Filtro Rigoroso (Vedação Total)
+function isResultValid(item, city, matriculaStr) {
+    const title = normalizeStr(item.title || "");
+    const snippet = normalizeStr(item.snippet || "");
+    const link = (item.link || "").toLowerCase();
+    const fullText = `${title} ${snippet}`;
+    const cityNorm = normalizeStr(city);
 
-    return items.sort((a, b) => {
-        const textA = normalizeStr((a.title || "") + " " + (a.snippet || ""));
-        const textB = normalizeStr((b.title || "") + " " + (b.snippet || ""));
+    // 1. BLACKLIST DE PALAVRAS (Veto Imediato)
+    const blacklist = [
+        "leilao", "leiloes", "megaleiloes", "superbid", "lance", "arrematacao", // Leilões
+        "venda", "aluguel", "terreno", "residencial", "loteamento", "imovel", "imobiliaria", // Imóveis
+        "google play", "app store", "tiktok", "instagram", "facebook", "youtube", "twitter", // Redes Sociais/Apps genéricos
+        "youtube.com", "facebook.com", "instagram.com", // Links de redes sociais
+        "game", "jogo", "bet", "apostas", // Lixo diverso
+        "receita federal", "cnpj", "socios", "empresa", // Dados empresariais (geralmente não é servidor PF)
+        "banco", "divida", "fiduciario" // Financeiro
+    ];
 
-        let scoreA = 0;
-        let scoreB = 0;
+    for (const badWord of blacklist) {
+        if (fullText.includes(badWord) || link.includes(badWord)) {
+            return false; // Descartado por blacklist
+        }
+    }
 
-        // Peso ALTO para cidade correta
-        if (normCity && textA.includes(normCity)) scoreA += 100;
-        // Peso MÉDIO para estado correto
-        if (normState && textA.includes(normState)) scoreA += 10;
+    // 2. OBRIGATORIEDADE DA CIDADE
+    if (cityNorm && !fullText.includes(cityNorm)) {
+        return false; // Descartado: não menciona a cidade
+    }
 
-        if (normCity && textB.includes(normCity)) scoreB += 100;
-        if (normState && textB.includes(normState)) scoreB += 10;
+    // 3. CONTEXTO POSITIVO (Opcional mas recomendado para "Servidor")
+    // Se não tiver pelo menos UM termo relevante, descartar? 
+    // Vamos ser um pouco flexíveis aqui, mas priorizar se tiver.
+    // Pelo menos a matrícula deve aparecer ou algo relacionado a funcionalismo
+    // const whitelist = ["servidor", "cargo", "portaria", "decreto", "diario oficial", "transparencia", "admissao", "folha", "matricula"];
+    // const hasContext = whitelist.some(w => fullText.includes(w));
+    // if (!hasContext) return false; 
 
-        return scoreB - scoreA; // Descrescente (maior score primeiro)
-    });
+    return true; // Passou no filtro
 }
 
-// Formata os resultados SEM FILTRAR NADA, APENAS ORDENA
+
 function formatResults(results, matricula, city, state, provider) {
-    let report = `### 🔎 Resultados da Busca (WEB)\n`;
-    report += `**Matrícula**: ${matricula}\n`;
-    report += `**Local Solicitado**: ${city}/${state}\n`;
-    report += `**Fonte**: ${provider.toUpperCase()}\n\n`;
+    let report = `### Relatório de Busca (WEB) - ${provider.toUpperCase()}\n\n`;
+    report += `**Alvo:** Matrícula ${matricula}\n`;
+    report += `**Local:** ${city}/${state}\n\n`;
 
     let items = [];
 
+    // Normalização de dados dos provedores
     if (provider === 'tavily') {
         if (Array.isArray(results.results)) {
             items = results.results.map(item => ({
@@ -113,38 +122,56 @@ function formatResults(results, matricula, city, state, provider) {
                 snippet: item.snippet || ''
             }));
         }
-    } else if (provider === 'scraperapi') {
-        return `### HTML Bruto (ScraperApi)\n\nA ScraperApi retornou o conteúdo bruto. O Visualizador não suporta HTML raw.\n\nQuery: ${matricula} ${city}`;
     }
 
     if (items.length === 0) {
-        return report + `\n❌ **Nenhum resultado retornado pela API.**\nVerifique se a matrícula e os termos estão corretos.`;
+        return report + `\n❌ **Nenhum resultado bruto retornado pela API.**\nTente outra fonte ou verifique a matrícula.`;
     }
 
-    // ORDENAR POR RELEVÂNCIA (Cidade solicitada no topo)
-    const sortedItems = sortItemsByRelevance(items, city, state);
+    // --- FILTRAGEM RIGOROSA ---
+    let validItems = items.filter(item => isResultValid(item, city, matricula));
 
-    // EXIBIR TUDO (Sorted)
+    if (validItems.length === 0) {
+        return report + `\n⚠️ **Resultados encontrados, mas todos foram filtrados por irrelevância (Leilões, Imóveis, etc).**\n\nIsso significa que a matrícula existe na web, mas apenas em contextos ignorados (ex: leilão de imóvel com essa matrícula).`;
+    }
+
+    // --- ORDENAÇÃO POR PRIORIDADE ---
+    const sortedItems = sortItemsByRelevance(validItems, city, state);
+
+    // --- EXIBIÇÃO ---
     sortedItems.forEach((item, index) => {
-        const text = normalizeStr((item.title || "") + " " + (item.snippet || ""));
-        const normCity = normalizeStr(city);
-
-        // Marca visualmente se é da cidade buscada
-        const isMatch = normCity && text.includes(normCity);
-        const icon = isMatch ? "⭐" : "📄";
-
-        report += `#### ${icon} Resultado ${index + 1}: ${item.title}\n`;
+        report += `#### ⭐ Resultado ${index + 1}: ${item.title}\n`; // Estrela para todos que passaram no filtro (pois são da cidade)
         report += `🔗 [Acessar Link](${item.link})\n`;
         report += `📝 "${item.snippet}"\n\n`;
         report += `---\n`;
     });
 
-    report += `\n**Total de Resultados**: ${items.length}`;
-    if (items.length > 0) {
-        report += `\n*(⭐ = Relevância alta para ${city})*`;
-    }
-
+    report += `\n**Total de Resultados Relevantes**: ${validItems.length} (de ${items.length} brutos)`;
     return report;
+}
+
+function sortItemsByRelevance(items, city, state) {
+    const priorityTerms = [
+        "sd pm", "pm", "policia militar", "guarda municipal", "policia municipal",
+        "guarda civil", "oficial pm", "sargento", "cabo pm", "tenente",
+        "promocoes de soldados pm", "soldado", "agente de transito",
+        "agente da autoridade de transito", "detran", "demutran", "cet",
+        "transito", "prefeitura", "secretaria", "servidor"
+    ];
+
+    return items.sort((a, b) => {
+        const textA = normalizeStr((a.title || "") + " " + (a.snippet || ""));
+        const textB = normalizeStr((b.title || "") + " " + (b.snippet || ""));
+
+        // Prioridade Absoluta: Termos Militares/Trânsito
+        const hasPriorityA = priorityTerms.some(term => textA.includes(term));
+        const hasPriorityB = priorityTerms.some(term => textB.includes(term));
+
+        if (hasPriorityA && !hasPriorityB) return -1;
+        if (!hasPriorityA && hasPriorityB) return 1;
+
+        return 0;
+    });
 }
 
 
@@ -167,8 +194,14 @@ router.post('/search', async (req, res) => {
 
     let report = "";
 
-    // Query de busca ampla
-    const searchQuery = `Matricula ${matricula}`;
+    // QUERY REFINADA E EXATA + KEYWORDS OBRIGATÓRIAS
+    // Ex: "Matricula 12345" "Jau" "SP" (servidor OR cargo OR portaria ...) -leilao ...
+    // Nota: O '-' (negativo) funciona bem no Google/SerpApi.
+    const queryBase = `"Matricula ${matricula}" "${city}" "${state}"`;
+    const positiveKeywords = `(servidor OR cargo OR portaria OR decreto OR "diario oficial" OR transparencia OR folha OR admissao)`;
+    const negativeKeywords = `-leilao -leiloes -imovel -terreno -venda -casa -apartamento -cartorio -fiduciario`;
+
+    const searchQuery = `${queryBase} ${positiveKeywords} ${negativeKeywords}`;
 
     try {
         // --- TAVILY API ---
@@ -183,7 +216,7 @@ router.post('/search', async (req, res) => {
                 'https://api.tavily.com/search',
                 {
                     api_key: keys.TAVILY,
-                    query: `${searchQuery} ${city} ${state}`,
+                    query: searchQuery,
                     search_depth: 'advanced',
                     include_answer: false,
                     max_results: 20
@@ -204,12 +237,11 @@ router.post('/search', async (req, res) => {
             const serpApiResponse = await axios.get('https://serpapi.com/search', {
                 params: {
                     api_key: keys.SERPAPI,
-                    q: searchQuery, // Query exata "Matricula X"
+                    q: searchQuery,
                     engine: 'google',
                     gl: 'br',
                     hl: 'pt',
-                    // location removido para evitar erro 400 e restrições
-                    num: 40 // Aumentado para ter mais chances de encontrar os prioritários
+                    num: 40
                 },
                 timeout: 45000
             });
@@ -222,29 +254,41 @@ router.post('/search', async (req, res) => {
                 return res.status(500).json({ error: 'Chave API ScraperApi não encontrada.' });
             }
 
-            const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`; // Query exata
+            const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
             console.log('[OSINT] Consultando ScraperApi:', googleUrl);
 
-
+            // Tenta obter JSON
             const scraperResponse = await axios.get('https://api.scraperapi.com', {
                 params: {
                     api_key: keys.SCRAPER,
                     url: googleUrl,
-                    country_code: 'br'
+                    country_code: 'br',
+                    autoparse: 'true'
                 },
                 timeout: 60000
             });
 
-            report = `### Resultado ScraperApi\n\nConteúdo HTML recebido.`;
+            if (scraperResponse.data && scraperResponse.data.organic_results) {
+                report = formatResults(scraperResponse.data.organic_results || [], matricula, city, state, 'serpapi');
+            } else {
+                // Fallback se autoparse falhar, mas avisando que pode ser HTML sujo
+                console.log('[OSINT] ScraperApi não retornou JSON estruturado. Resposta bruta tipo:', typeof scraperResponse.data);
+                if (typeof scraperResponse.data === 'string' && scraperResponse.data.includes('<!DOCTYPE html>')) {
+                    report = `### Resultado ScraperApi\n\nA API retornou HTML bruto não processável.\nO modo 'autoparse' não conseguiu extrair dados estruturados desta busca.\nRecomendado usar **SerpApi** ou **Tavily** para esta consulta específica.`;
+                } else {
+                    // Tentar salvar o que veio
+                    report = `### Resultado ScraperApi\n\nDados recebidos, mas formato não reconhecido pelo formatador.\n(Veja logs para detalhes)`;
+                }
+            }
 
         } else {
             return res.status(400).json({ error: 'Provedor inválido.' });
         }
 
-        // Salvar (Sem IA)
+        // Salvar
         db.run(
             'INSERT INTO osint_searches (user_id, target_name, target_id, city, state, notes, report_content) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [req.user.id, target_name || 'N/A', matricula, city, state, `Provedor: ${selectedProvider} | Sorted`, report],
+            [req.user.id, target_name || 'N/A', matricula, city, state, `Provedor: ${selectedProvider} | Strict Filter`, report],
             (err) => { }
         );
 
@@ -258,44 +302,5 @@ router.post('/search', async (req, res) => {
         res.status(500).json({ error: 'Erro ao executar busca', details: error.message });
     }
 });
-
-// Helper de Normalização
-function normalizeStr(str) {
-    return str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-}
-
-// Função de Ordenação por Relevância e Prioridade
-function sortItemsByRelevance(items, city, state) {
-    const priorityTerms = [
-        "sd pm", "pm", "policia militar", "guarda municipal", "policia municipal",
-        "guarda civil", "oficial pm", "sargento", "cabo pm", "tenente",
-        "promocoes de soldados pm", "soldado", "agente de transito",
-        "agente da autoridade de transito", "detran", "demutran", "cet",
-        "transito", "prefeitura", "secretaria"
-    ];
-
-    return items.sort((a, b) => {
-        const textA = normalizeStr((a.title || "") + " " + (a.snippet || ""));
-        const textB = normalizeStr((b.title || "") + " " + (b.snippet || ""));
-
-        const cityNorm = normalizeStr(city);
-
-        // 1. Prioridade Absoluta: Termos Militares/Trânsito
-        const hasPriorityA = priorityTerms.some(term => textA.includes(term));
-        const hasPriorityB = priorityTerms.some(term => textB.includes(term));
-
-        if (hasPriorityA && !hasPriorityB) return -1;
-        if (!hasPriorityA && hasPriorityB) return 1;
-
-        // 2. Relevância Geográfica (Cidade)
-        const hasCityA = cityNorm && textA.includes(cityNorm);
-        const hasCityB = cityNorm && textB.includes(cityNorm);
-
-        if (hasCityA && !hasCityB) return -1;
-        if (!hasCityA && hasCityB) return 1;
-
-        return 0;
-    });
-}
 
 module.exports = router;
