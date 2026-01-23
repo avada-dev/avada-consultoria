@@ -188,3 +188,18 @@ const initDatabase = () => {
 initDatabase();
 
 module.exports = db;
+    // OSINT Searches table  
+    db.run(`
+      CREATE TABLE IF NOT EXISTS osint_searches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        target_name TEXT,
+        target_id TEXT NOT NULL,
+        city TEXT NOT NULL,
+        state TEXT NOT NULL,
+        notes TEXT,
+        report_content TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
