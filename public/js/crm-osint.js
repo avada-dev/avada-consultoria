@@ -153,6 +153,7 @@ async function handleOSINTSearch(e) {
     const city = document.getElementById('osint-city').value;
     const state = document.getElementById('osint-state').value;
     const name = document.getElementById('osint-name').value;
+    const provider = document.getElementById('osint-provider').value; // PROVIDER
 
     const btn = document.getElementById('btn-osint-search');
     const loading = document.getElementById('osint-loading');
@@ -166,7 +167,7 @@ async function handleOSINTSearch(e) {
 
     try {
         const response = await fetchAPI('/osint/search', 'POST', {
-            matricula, city, state, target_name: name
+            matricula, city, state, target_name: name, provider // PROVIDER
         });
 
         // Render Markdown (basic implementation or use a lib if available, here we assume text)
