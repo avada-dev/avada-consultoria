@@ -68,10 +68,10 @@ function isResultValid(item, city, matriculaStr) {
     const blacklist = [
         "leilao", "leiloes", "megaleiloes", "superbid", "lance", "arrematacao", // Leilões
         "venda", "aluguel", "terreno", "residencial", "loteamento", "imovel", "imobiliaria", // Imóveis
-        "google play", "app store", "tiktok", "instagram", "facebook", "youtube", "twitter", // Redes Sociais/Apps genéricos
-        "youtube.com", "facebook.com", "instagram.com", // Links de redes sociais
+        "google play", "app store", "tiktok", "instagram", "facebook", "youtube", "twitter", // Redes Sociais/Apps
+        "youtube.com", "facebook.com", "instagram.com", "formula 1", "grand prix", "schedule", "calendar", "corrida", // Lixo/F1
         "game", "jogo", "bet", "apostas", // Lixo diverso
-        "receita federal", "cnpj", "socios", "empresa", // Dados empresariais (geralmente não é servidor PF)
+        "receita federal", "cnpj", "socios", "empresa", // Dados empresariais
         "banco", "divida", "fiduciario" // Financeiro
     ];
 
@@ -81,25 +81,39 @@ function isResultValid(item, city, matriculaStr) {
         }
     }
 
-    // 2. OBRIGATORIEDADE DA CIDADE
+    // 2. OBRIGATORIEDADE DA CIDADE E DA MATRÍCULA
+    // O resultado TEM que ter o nome da cidade E o número da matrícula.
     if (cityNorm && !fullText.includes(cityNorm)) {
         return false; // Descartado: não menciona a cidade
     }
 
-    // 3. CONTEXTO POSITIVO (Opcional mas recomendado para "Servidor")
-    // Se não tiver pelo menos UM termo relevante, descartar? 
-    // Vamos ser um pouco flexíveis aqui, mas priorizar se tiver.
-    // Pelo menos a matrícula deve aparecer ou algo relacionado a funcionalismo
-    // const whitelist = ["servidor", "cargo", "portaria", "decreto", "diario oficial", "transparencia", "admissao", "folha", "matricula"];
-    // const hasContext = whitelist.some(w => fullText.includes(w));
-    // if (!hasContext) return false; 
+    // Normaliza matricula remove traços/pontos para verificação flexivel
+    const cleanMat = matriculaStr.replace(/[^a-zA-Z0-9]/g, '');
+    const cleanText = fullText.replace(/[^a-zA-Z0-9]/g, '');
 
-    return true; // Passou no filtro
+    if (!cleanText.includes(cleanMat)) {
+        return false; // Descartado: não menciona a matrícula
+    }
+
+    // 3. CONTEXTO POSITIVO OBRIGATÓRIO
+    // O resultado TEM que ter algum cheiro de servidor público
+    const whitelist = [
+        "servidor", "cargo", "portaria", "decreto", "diario", "oficial",
+        "transparencia", "admissao", "folha", "matricula", "lotacao",
+        "remuneracao", "publico", "municipal", "estadual", "federal",
+        "secretaria", "prefeitura", "governo"
+    ];
+
+    // Verifica se tem pelo menos UMA palavra da whitelist
+    const hasContext = whitelist.some(w => fullText.includes(w));
+    if (!hasContext) return false;
+
+    return true; // Passou no filtro rigoroso
 }
 
 
 function formatResults(results, matricula, city, state, provider) {
-    let report = `### Relatório de Busca (WEB) - ${provider.toUpperCase()}\n\n`;
+    let report = `### Relatório de Busca (WEB) - ${provider.toUpperCase()} [v3.0 Blindado]\n\n`;
     report += `**Alvo:** Matrícula ${matricula}\n`;
     report += `**Local:** ${city}/${state}\n\n`;
 
@@ -129,10 +143,16 @@ function formatResults(results, matricula, city, state, provider) {
     }
 
     // --- FILTRAGEM RIGOROSA ---
-    let validItems = items.filter(item => isResultValid(item, city, matricula));
+    let validItems = items.filter(item => {
+        const isValid = isResultValid(item, city, matricula);
+        if (!isValid) {
+            console.log(`[OSINT FILTER] Rejeitado: "${item.title}" (Não contém matrícula '${matricula}' ou contexto insuficiente)`);
+        }
+        return isValid;
+    });
 
     if (validItems.length === 0) {
-        return report + `\n⚠️ **Resultados encontrados, mas todos foram filtrados por irrelevância (Leilões, Imóveis, etc).**\n\nIsso significa que a matrícula existe na web, mas apenas em contextos ignorados (ex: leilão de imóvel com essa matrícula).`;
+        return report + `\n🚫 **Busca Blindada: Nenhum resultado seguro encontrado.**\n\nO sistema encontrou ${items.length} páginas brutas (lixo, anúncios, parciais), mas **TODAS** foram bloqueadas pelo filtro de segurança porque não continham EXPLICITAMENTE o número da matrícula **${matricula}** junto com dados de servidor público na cidade de **${city}**.\n\nIsso protege você de ver resultados irrelevantes.`;
     }
 
     // --- ORDENAÇÃO POR PRIORIDADE ---
@@ -140,7 +160,7 @@ function formatResults(results, matricula, city, state, provider) {
 
     // --- EXIBIÇÃO ---
     sortedItems.forEach((item, index) => {
-        report += `#### ⭐ Resultado ${index + 1}: ${item.title}\n`; // Estrela para todos que passaram no filtro (pois são da cidade)
+        report += `#### ⭐ Resultado ${index + 1}: ${item.title}\n`;
         report += `🔗 [Acessar Link](${item.link})\n`;
         report += `📝 "${item.snippet}"\n\n`;
         report += `---\n`;
@@ -197,9 +217,9 @@ router.post('/search', async (req, res) => {
     // QUERY REFINADA E EXATA + KEYWORDS OBRIGATÓRIAS
     // Ex: "Matricula 12345" "Jau" "SP" (servidor OR cargo OR portaria ...) -leilao ...
     // Nota: O '-' (negativo) funciona bem no Google/SerpApi.
-    const queryBase = `"Matricula ${matricula}" "${city}" "${state}"`;
-    const positiveKeywords = `(servidor OR cargo OR portaria OR decreto OR "diario oficial" OR transparencia OR folha OR admissao)`;
-    const negativeKeywords = `-leilao -leiloes -imovel -terreno -venda -casa -apartamento -cartorio -fiduciario`;
+    const queryBase = `"Matricula ${matricula}"`; // Removido City/State da query base para evitar restrição excessiva na busca inicial, mas mantido no filtro
+    const positiveKeywords = `"${city}" "${state}" (servidor OR cargo OR portaria OR decreto OR "diario oficial" OR transparencia OR folha OR admissao)`;
+    const negativeKeywords = `-leilao -leiloes -imovel -terreno -venda -casa -apartamento -cartorio -fiduciario -formula1 -grandprix`;
 
     const searchQuery = `${queryBase} ${positiveKeywords} ${negativeKeywords}`;
 
