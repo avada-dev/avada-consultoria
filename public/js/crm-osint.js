@@ -9,14 +9,14 @@ async function loadOSINTView() {
             <div class="info-card mb-4" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                 <h3 style="color: #2d3748; margin-bottom: 15px;"><i class="fas fa-user-shield" style="color: #667eea;"></i> Buscar Servidor Público</h3>
                 <p class="text-gray-600 mb-4">
-                    Utilize esta ferramenta para buscar informações públicas (Portal da Transparência, Diários Oficiais) utilizando Inteligência Artificial.
+                    Utilize esta ferramenta para buscar informações públicas (Portal da Transparência, Diários Oficiais) em diversas fontes.
                 </p>
                 
                 <form id="osint-form" onsubmit="handleOSINTSearch(event)">
                     <div class="form-group mb-4">
                         <label class="form-label">Provedor de Busca *</label>
                         <select id="osint-provider" class="form-input" required>
-                            <option value="tavily">Tavily API (Busca Otimizada para IA) - Recomendado</option>
+                            <option value="tavily">Tavily API (Busca Otimizada) - Recomendado</option>
                             <option value="serpapi">SerpApi (Google Search API)</option>
                             <option value="scraperapi">ScraperApi (Web Scraping)</option>
                         </select>
@@ -78,7 +78,7 @@ async function loadOSINTView() {
 
                     <div class="form-actions mt-4 text-right">
                         <button type="submit" class="btn btn-primary" id="btn-osint-search">
-                            <i class="fas fa-robot"></i> Iniciar Investigação IA
+                            <i class="fas fa-search"></i> Iniciar Busca Web
                         </button>
                     </div>
                 </form>
@@ -96,7 +96,7 @@ async function loadOSINTView() {
             <!-- Result Card -->
             <div id="osint-result" class="info-card" style="display: none; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #48bb78;">
                 <h3 style="color: #2d3748; margin-bottom: 15px;">
-                    <i class="fas fa-file-contract" style="color: #48bb78;"></i> Relatório de Inteligência
+                    <i class="fas fa-file-contract" style="color: #48bb78;"></i> Relatório de Busca
                 </h3>
                 <div class="markdown-body" id="osint-report-content" style="font-size: 0.95rem; line-height: 1.6; color: #2d3748;">
                     <!-- Report content goes here -->
