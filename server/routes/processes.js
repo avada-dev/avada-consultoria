@@ -292,33 +292,46 @@ router.get('/:id/full', authenticate, async (req, res) => {
 // ==========================================
 
 // Upload arquivo para processo
-router.post('/:id/attachments', authenticate, upload.single('file'), (req, res) => {
+router.post('/:id/attachments', authenticate, upload.array('files'), (req, res) => {
     const processId = req.params.id;
-    const file = req.file;
+    const files = req.files;
 
-    if (!file) {
+    if (!files || files.length === 0) {
         return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // Salvar no banco
-    const query = `
-        INSERT INTO attachments (process_id, filename, original_name, file_type, file_size, uploaded_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `;
+    const insertedFiles = [];
+    let errors = 0;
 
-    db.run(query, [processId, file.filename, file.originalname, file.mimetype, file.size, req.user.id], function (err) {
-        if (err) {
-            // Deletar arquivo se falhar no banco
-            fs.unlink(file.path, () => { });
-            return res.status(500).json({ error: 'Erro ao salvar arquivo' });
-        }
+    // Use transaction or simple loop. SQLite serialize is safe.
+    db.serialize(() => {
+        const stmt = db.prepare(`
+            INSERT INTO attachments (process_id, filename, original_name, file_type, file_size, uploaded_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
 
-        res.status(201).json({
-            id: this.lastID,
-            filename: file.filename,
-            original_name: file.originalname,
-            file_type: file.mimetype,
-            file_size: file.size
+        files.forEach(file => {
+            stmt.run([processId, file.filename, file.originalname, file.mimetype, file.size, req.user.id], function (err) {
+                if (err) {
+                    console.error('Error inserting file:', err);
+                    errors++;
+                } else {
+                    insertedFiles.push({
+                        id: this.lastID,
+                        filename: file.filename,
+                        original_name: file.originalname,
+                        file_type: file.mimetype,
+                        file_size: file.size
+                    });
+                }
+            });
+        });
+
+        stmt.finalize(() => {
+            if (errors > 0 && insertedFiles.length === 0) {
+                return res.status(500).json({ error: 'Erro ao salvar arquivos' });
+            }
+            res.status(201).json(insertedFiles);
         });
     });
 });

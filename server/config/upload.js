@@ -30,7 +30,12 @@ const fileFilter = (req, file, cb) => {
         'image/gif',
         'video/mp4',
         'video/quicktime',
-        'video/x-msvideo'
+        'video/x-msvideo',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
     ];
 
     if (allowedTypes.includes(file.mimetype)) {

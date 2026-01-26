@@ -1590,43 +1590,54 @@ async function handleUpload(e) {
   if (!currentProcessId) return;
 
   const fileInput = document.getElementById('attachment-file');
-  const file = fileInput.files[0];
-  if (!file) return;
+  const files = fileInput.files;
+  if (!files || files.length === 0) return;
 
   const loading = document.getElementById('upload-progress');
   const btn = e.target.querySelector('button');
 
   loading.classList.remove('hidden');
+  loading.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
   btn.disabled = true;
 
   const formData = new FormData();
-  formData.append('file', file);
+  for (let i = 0; i < files.length; i++) {
+    formData.append('files', files[i]);
+  }
 
   try {
     const response = await fetch(`${API_URL}/processes/${currentProcessId}/attachments`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`
+        // Content-Type header must not be set manually when using FormData
       },
       body: formData
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Erro no upload');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erro ao enviar arquivo');
     }
 
-    // Success
-    fileInput.value = '';
-    loadAttachments(currentProcessId);
-
-  } catch (error) {
-    alert('Erro ao enviar arquivo: ' + error.message);
-  } finally {
     loading.classList.add('hidden');
     btn.disabled = false;
+    fileInput.value = ''; // Clear input
+
+    loadAttachments(currentProcessId);
+
+    // Refresh main view to update attachment count
+    if (localStorage.getItem('currentSection') === 'processes') {
+      loadProcesses(false);
+    }
+
+  } catch (error) {
+    loading.classList.add('hidden');
+    btn.disabled = false;
+    alert('Erro ao enviar arquivo: ' + error.message);
   }
 }
+
 
 async function deleteAttachment(id) {
   if (!confirm('Tem certeza que deseja excluir este arquivo?')) return;
