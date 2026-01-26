@@ -135,6 +135,10 @@
                         onclick="ConsultasGerais.pje('TJCE')">
                         <span>↳ PJe TJCE (Hoje)</span>
                     </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9em; height: auto; min-height: 35px;"
+                        onclick="ConsultasGerais.domicilio()">
+                        <span>Domicílio Eletrônico CNJ</span>
+                    </div>
 
                     <!-- 2. Jurisprudências -->
                     <div class="menu-item"
@@ -178,6 +182,12 @@
                         onclick="ConsultasGerais.prf('lista-radares')">
                         <span>Lista Radares (Portáteis)</span>
                     </div>
+                </div>
+
+                <!-- DATAJUS -->
+                <div class="menu-item" onclick="loadDatajusView()" style="cursor: pointer;">
+                    <span class="menu-icon"><i class="fas fa-balance-scale"></i></span>
+                    <span>Datajus CNJ</span>
                 </div>
                 <div class="menu-item admin-only hidden" data-view="system-info">
                     <span class="menu-icon"><i class="fas fa-info-circle"></i></span>
@@ -815,6 +825,7 @@
     <script src="js/crm-deadline-calculator.js?v=8.0&t=20260119"></script>
     <script src="js/crm-process-view.js?v=8.0&t=20260119"></script>
     <script src="js/consultas-gerais.js?v=1.0"></script>
+    <script src="js/crm-datajus.js?v=1.0"></script>
     <script src="js/crm-osint.js?v=1.0"></script>
 </body>
 

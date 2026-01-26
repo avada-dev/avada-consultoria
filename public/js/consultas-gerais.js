@@ -71,6 +71,12 @@ const ConsultasGerais = {
         openPopup('https://servicos.rbmlq.gov.br/DeclaracoesConformidade', 'DeclaracaoConformidade', 1000, 700);
     },
 
+    domicilio: () => {
+        // Link solicitado pelo usuário (SSO/Auth)
+        const url = 'https://sso.cloud.pje.jus.br/auth/realms/pje/protocol/openid-connect/auth?client_id=domicilio-eletronico-frontend&redirect_uri=https%3A%2F%2Fdomicilio-eletronico.pdpj.jus.br%2F&response_mode=fragment&response_type=code&scope=openid';
+        openPopup(url, 'DomicilioEletronico', 1200, 800);
+    },
+
     prf: (tipo) => {
         let url = '';
         if (tipo === 'radares-fixos') {
