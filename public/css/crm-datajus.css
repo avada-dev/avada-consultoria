@@ -1,0 +1,137 @@
+/* Datajus Styling - Replicating the Premium React/Tailwind Look */
+
+.datajus-container {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #1e293b; /* slate-800 */
+}
+
+/* --- Utilities Mapping (Tailwind-like) --- */
+.bg-gray-900 { background-color: #0f172a; }
+.bg-gray-800 { background-color: #1e293b; }
+.bg-gray-50  { background-color: #f8fafc; }
+.bg-white    { background-color: #ffffff; }
+.bg-blue-600 { background-color: #2563eb; }
+.bg-blue-50  { background-color: #eff6ff; }
+.bg-red-50   { background-color: #fef2f2; }
+.bg-yellow-100 { background-color: #fef9c3; }
+
+.text-white { color: #ffffff; }
+.text-gray-400 { color: #94a3b8; }
+.text-gray-300 { color: #cbd5e1; }
+.text-green-400 { color: #4ade80; }
+.text-blue-800 { color: #1e40af; }
+.text-gray-700 { color: #334155; }
+.text-gray-500 { color: #64748b; }
+.text-red-700  { color: #b91c1c; }
+.text-red-600  { color: #dc2626; }
+.text-yellow-800 { color: #854d0e; }
+
+/* Spacing & layout */
+.p-6 { padding: 1.5rem; }
+.p-4 { padding: 1rem; }
+.p-3 { padding: 0.75rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+
+.rounded-xl { border-radius: 0.75rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-full { border-radius: 9999px; }
+
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+
+.border { border-width: 1px; border-style: solid; }
+.border-gray-700 { border-color: #334155; }
+.border-blue-200 { border-color: #bfdbfe; }
+.border-gray-200 { border-color: #e2e8f0; }
+.border-gray-300 { border-color: #cbd5e1; }
+.border-red-500  { border-color: #ef4444; }
+
+/* Flex & Grid */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+
+@media (min-width: 768px) {
+    .md\:flex-row { flex-direction: row; }
+    .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Specific Component Styles */
+.datajus-header-icon {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.datajus-input, select, input[type="text"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #f8fafc; /* bg-gray-50 */
+    border: 1px solid #cbd5e1; /* border-gray-300 */
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.datajus-input:focus, select:focus, input[type="text"]:focus {
+    border-color: #3b82f6; /* blue-500 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: white;
+}
+
+#btn-datajus-search {
+    width: 100%;
+    background-color: #2563eb;
+    color: white;
+    font-weight: 600;
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+#btn-datajus-search:hover {
+    background-color: #1d4ed8;
+}
+
+#btn-datajus-search:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Timeline specific */
+.border-l-2 { border-left-width: 2px; }
+.border-blue-500 { border-color: #3b82f6; }
+.ml-2 { margin-left: 0.5rem; }
+.pl-6 { padding-left: 1.5rem; }
+.-left-\[5px\] { left: -5px; }
+.w-2\.5 { width: 0.625rem; }
+.h-2\.5 { height: 0.625rem; }
+
+/* Custom Badge fix */
+#proxy-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 12px;
+}
