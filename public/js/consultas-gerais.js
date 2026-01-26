@@ -23,13 +23,13 @@ function openPopup(url, title, w, h) {
 function toggleConsultasMenu() {
     const submenu = document.getElementById('submenu-consultas');
     const icon = document.getElementById('icon-consultas-arrow');
-    
+
     if (submenu.classList.contains('hidden')) {
         submenu.classList.remove('hidden');
-        if(icon) icon.style.transform = 'rotate(180deg)';
+        if (icon) icon.style.transform = 'rotate(180deg)';
     } else {
         submenu.classList.add('hidden');
-        if(icon) icon.style.transform = 'rotate(0deg)';
+        if (icon) icon.style.transform = 'rotate(0deg)';
     }
 }
 
@@ -38,19 +38,21 @@ const ConsultasGerais = {
     pje: (tribunal) => {
         const date = getTodayDateISO();
         let url = '';
-        
+
         if (tribunal === 'TJSP') {
             url = `https://comunica.pje.jus.br/consulta?siglaTribunal=TJSP&dataDisponibilizacaoInicio=${date}&dataDisponibilizacaoFim=${date}`;
         } else if (tribunal === 'TJRJ') {
             url = `https://comunica.pje.jus.br/consulta?siglaTribunal=TJRJ&dataDisponibilizacaoInicio=${date}&dataDisponibilizacaoFim=${date}`;
         } else if (tribunal === 'TJMG') {
             url = `https://comunica.pje.jus.br/consulta?siglaTribunal=TJMG&dataDisponibilizacaoInicio=${date}&dataDisponibilizacaoFim=${date}`;
+        } else if (tribunal === 'TJCE') {
+            url = `https://comunica.pje.jus.br/consulta?siglaTribunal=TJCE&dataDisponibilizacaoInicio=${date}&dataDisponibilizacaoFim=${date}`;
         } else {
             url = 'https://comunica.pje.jus.br/';
         }
-        
-        // PJe abre em nova aba normal, pois é um sistema complexo
-        window.open(url, '_blank');
+
+        // PJe agora abre em Popup conforme solicitado
+        openPopup(url, 'PJe', 1200, 800);
     },
 
     jurisprudencia: () => {
@@ -78,7 +80,7 @@ const ConsultasGerais = {
         } else if (tipo === 'lista-radares') {
             url = 'https://www.gov.br/prf/pt-br/assuntos/fiscalizacao-de-velocidade/lista-de-radares';
         }
-        
+
         // PRF tem restrições de gov.br, abrir em popup
         if (url) openPopup(url, 'PRF', 1000, 700);
     }
