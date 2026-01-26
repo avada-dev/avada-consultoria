@@ -97,6 +97,61 @@
                     <span class="menu-icon"><i class="fas fa-user-shield"></i></span>
                     <span>Buscar Servidor</span>
                 </div>
+
+                <!-- MENU CONSULTAS GERAIS -->
+                <div class="menu-item" onclick="toggleConsultasMenu()" style="cursor: pointer; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <span class="menu-icon"><i class="fas fa-globe"></i></span>
+                        <span>Consultas Gerais</span>
+                    </div>
+                    <span id="icon-consultas-arrow" style="transition: transform 0.3s;"><i class="fas fa-chevron-down" style="font-size: 0.8em;"></i></span>
+                </div>
+                
+                <div id="submenu-consultas" class="hidden" style="background: rgba(0,0,0,0.1); padding: 5px 0;">
+                    <!-- 1. Comunicações Processuais -->
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9em; height: auto; min-height: 35px;" onclick="ConsultasGerais.pje('Geral')">
+                        <span>PJe - Geral</span>
+                    </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9rem; height: auto; min-height: 35px; color: #cbd5e0;" onclick="ConsultasGerais.pje('TJSP')">
+                        <span>↳ PJe TJSP (Hoje)</span>
+                    </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9rem; height: auto; min-height: 35px; color: #cbd5e0;" onclick="ConsultasGerais.pje('TJRJ')">
+                        <span>↳ PJe TJRJ (Hoje)</span>
+                    </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9rem; height: auto; min-height: 35px; color: #cbd5e0;" onclick="ConsultasGerais.pje('TJMG')">
+                        <span>↳ PJe TJMG (Hoje)</span>
+                    </div>
+
+                    <!-- 2. Jurisprudências -->
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9em; height: auto; min-height: 35px; margin-top: 5px;" onclick="ConsultasGerais.jurisprudencia()">
+                        <span>Jurisprudências</span>
+                    </div>
+
+                    <!-- 3. RADAR -->
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9em; height: auto; min-height: 35px;" onclick="ConsultasGerais.radar()">
+                        <span>Consulta RADAR</span>
+                    </div>
+
+                    <!-- 4/5. INMETRO -->
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9em; height: auto; min-height: 35px;" onclick="ConsultasGerais.inmetro()">
+                        <span>INMETRO (Instrumento)</span>
+                    </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9em; height: auto; min-height: 35px;" onclick="ConsultasGerais.inmetro2()">
+                        <span>INMETRO (Conformidade)</span>
+                    </div>
+
+                    <!-- 6. PRF -->
+                    <div style="padding: 10px 0 5px 45px; font-size: 0.8em; font-weight: bold; color: #a0aec0; text-transform: uppercase;">Consultas PRF</div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9rem; height: auto; min-height: 35px; color: #cbd5e0;" onclick="ConsultasGerais.prf('radares-fixos')">
+                        <span>Radares Fixos</span>
+                    </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9rem; height: auto; min-height: 35px; color: #cbd5e0;" onclick="ConsultasGerais.prf('trechos-criticos')">
+                        <span>Trechos Críticos</span>
+                    </div>
+                    <div class="menu-item" style="padding-left: 45px; font-size: 0.9rem; height: auto; min-height: 35px; color: #cbd5e0;" onclick="ConsultasGerais.prf('lista-radares')">
+                        <span>Lista Radares (Portáteis)</span>
+                    </div>
+                </div>
                 <div class="menu-item admin-only hidden" data-view="system-info">
                     <span class="menu-icon"><i class="fas fa-info-circle"></i></span>
                     <span>Informações do Sistema</span>
@@ -732,6 +787,7 @@
     <script src="js/crm-deadline-alerts.js?v=8.0&t=20260119"></script>
     <script src="js/crm-deadline-calculator.js?v=8.0&t=20260119"></script>
     <script src="js/crm-process-view.js?v=8.0&t=20260119"></script>
+    <script src="js/consultas-gerais.js?v=1.0"></script>
     <script src="js/crm-osint.js?v=1.0"></script>
 </body>
 
